@@ -28,19 +28,27 @@ Sys.setlocale("LC_TIME", "C")
 ```{r packages, include=FALSE}
 # require(devtools)
 # if(!require(installifnot)) install_github("uebvhir/installifnot")
-
-# library("bibtex")
 ```
 
 # Workshop structure
 
 ## Instructor Names
 
-Alex, Paco, Pol
+- Alex Sánchez (asanchez@ub.edu)
+- Francesc Carmona (fcarmona@ub.edu), 
+- Pol Castellano (pcastellano@gmail,com)
 
 ## Workshop Description
 
+
+The workshop works through a pipeline that investigates the structure of a single or multiple omics dataset in order to determine the association between omics and phenotype characteristics such as disease type.
+
+
 ### Pre-requisites
+
+- Good knowledge of R and familiarity with dimension reduction techniques.
+- Familiarity with omics techniques and Bioconductor is a plus.
+
 
 ### Workshop Participation
 
@@ -48,48 +56,30 @@ Execution of example code and hands-on practice
 
 ### R/Bioconductor packages needed
 
-The following block of code will install the packages needed for the workshop.
+The workshop requires a series of R and Bioconductor packages. 
 
-```{r}
-if(!requireNamespace(BiocManager)){
-      install.packages("BiocManager", dep=TRUE)
-}
-
-installifnot <- function (pckgName, BioC=TRUE){
-  if(BioC){
-    if(!requireNamespace(pckgName, character.only=TRUE)){
-      BiocManager::install(pckgName)
-    }
-  }else{
-    if(!requireNamespace(pckgName, character.only=TRUE)){
-      install.packages(pckgName, dep=TRUE)
-    }
-  }
-}
-installifnot("devtools", BioC=FALSE)
-installifnot("knitr", BioC=FALSE)
-installifnot("ggplot2", BioC=FALSE)
-installifnot("dplyr", BioC=FALSE)
-installifnot("fastICA", BioC=FALSE)
-installifnot("Rtsne", BioC=FALSE)
-installifnot("NMF", BioC=FALSE)
-installifnot("matrixStats", BioC=FALSE)
-installifnot("FactoMineR", BioC=FALSE)
-installifnot("iClusterPlus", BioC=FALSE)
-installifnot("NbClust", BioC=FALSE)
-
-installifnot("org.Hs.eg.db")
-installifnot("SummarizedExperiment")
-installifnot("pheatmap")
-installifnot("clusterProfiler")
-
-devtools::install_github("compgenomr/compGenomRData")
-```
+__Before you start__ run the script `InstallPackages.R` available in the project main folder.
 
 
 ### Time outline
 
+```{r}
+outline <- c("Workshop presentation and Overview", "10m",
+"Exploring single omics datasets", "20m",
+"Building a SummarizedExperiment from scratch",	"10m",
+"TCGA multi-assay dataset", "10m",
+"Multiple Factor Analysis and iCluster", "30m",
+"Enrichment Analysis and Factor interpretation",	"20m")
+
+timeTable<- matrix(outline, ncol=2, byrow = TRUE)
+colnames(timeTable) <- c("Activity", "Time")
+
+kableExtra::kable(timeTable)
+```
+
 ## Workshop goals and objectives
+
+_Pendent_
 
 ### Learning goals
 
@@ -107,7 +97,7 @@ devtools::install_github("compgenomr/compGenomRData")
 
 ## Use case. Studying leukemia using gene expression microarrays
 
-Start getting the data 
+We start with a gene expression matrix obtained from XXXX. 
 
 ```{r}
 library (compGenomRData)
@@ -130,6 +120,7 @@ rownames(annotation_col)=colnames(mat)
 ## Visualizing complex datasets in reduced dimension
 
 Gene expression is not independent between genes
+
 ```{r}
 ## ----scatterb4PCA,out.width='60%',fig.width=5.5, fig.cap="Gene expression values of CD33 and PYGL genes across leukemia patients."----
 plot(mat[rownames(mat)=="ENSG00000100504",],
@@ -216,7 +207,6 @@ plot(pr$x[,1],pr$x[,2],col=as.factor(annotation_col$LeukemiaType))
 
 
 
-
 ```{r out.width='70%',fig.cap= "Singular value decomposition (SVD) reorganized as multiplication of m-by-n weights matrix and eigenvectors"}
 knitr::include_graphics("images/SVDasWeights.png")
 ```
@@ -227,7 +217,7 @@ knitr::include_graphics("images/SVDlatentExample.png")
 
 
 
-### Independent Components ANalysis (ICA)
+### Independent Components Analysis (ICA)
 
 ```{r, fig.cap="Independent Component Analysis (ICA)" }
 knitr::include_graphics("images/ICAcartoon.png")
@@ -315,12 +305,411 @@ legend("bottomleft",
 
 ## Use case: multi-omics data for colo-rectal cancer
 
-## Latent variable models for multi-omics data integration
+Read the data
+
+```{r}
+# read in the csv from the companion package as a data frame
+csvfile <- system.file("extdata", "multi-omics", "COREAD_CMS13_gex.csv", 
+                       package="compGenomRData")
+x1 <- read.csv(csvfile, row.names=1)
+# Fix the gene names in the data frame
+rownames(x1) <- sapply(strsplit(rownames(x1), "\\|"), function(x) x[1])
+# Output a table
+knitr::kable(head(t(head(x1))), caption="Example gene expression data (head)")
+
+
+## ------------------------------------------------------------------------------------------------------------
+# read in the csv from the companion package as a data frame
+csvfile <- system.file("extdata", "multi-omics", "COREAD_CMS13_muts.csv",
+                       package="compGenomRData")
+x2 <- read.csv(csvfile, row.names=1)
+# Set mutation data to be binary (so if a gene has more than 1 mutation,
+# we only count one)
+x2[x2>0]=1
+# output a table
+knitr::kable(head(t(head(x2))), caption="Example mutation data (head)")
+
+
+## ------------------------------------------------------------------------------------------------------------
+# read in the csv from the companion package as a data frame
+csvfile <- system.file("extdata", "multi-omics", "COREAD_CMS13_cnv.csv", 
+                       package="compGenomRData")
+x3 <- read.csv(csvfile, row.names=1)
+# output a table
+knitr::kable(head(t(head(x3))), 
+             caption="Example copy number data for CRC samples")
+
+
+## ------------------------------------------------------------------------------------------------------------
+# read in the csv from the companion package as a data frame
+csvfile <- system.file("extdata", "multi-omics", "COREAD_CMS13_subtypes.csv",
+                       package="compGenomRData")
+covariates <- read.csv(csvfile, row.names=1)
+# Fix the TCGA identifiers so they match up with the omics data
+rownames(covariates) <- gsub(pattern = '-', replacement = '\\.',
+                             rownames(covariates))
+covariates <- covariates[colnames(x1),]
+# create a dataframe which will be used to annotate later graphs
+anno_col <- data.frame(cms=as.factor(covariates$cms_label))
+rownames(anno_col) <- rownames(covariates)
+# output a table
+knitr::kable(head(anno_col), 
+             caption="Clinical information (covariates)")
+
+```
+
+#### Explore individual datasets
+
+Gene Expression data
+
+```{r}
+pheatmap::pheatmap(x1,
+                   annotation_col = anno_col,
+                   show_colnames = FALSE,
+                   show_rownames = FALSE,
+                   main="Gene expression data")
+```
+
+Mutation data
+
+```{r}
+## ------------------------------------------------------------------------------------------------------------
+pheatmap::pheatmap(x2,
+                   annotation_col = anno_col,
+                   show_colnames = FALSE,
+                   show_rownames = FALSE,
+                   main="Mutation data")
+```
+
+Copy number data
+
+```{r}
+## ------------------------------------------------------------------------------------------------------------
+pheatmap::pheatmap(x3,
+                   annotation_col = anno_col,
+                   show_colnames = FALSE,
+                   show_rownames = FALSE,
+                   main="Copy number data")
+
+```
+
 
 ## Matrix factorization methods for unsupervised multiomics integration
 
+### Multiple Factor Analysis
+
+```{r}
+## ------------------------------------------------------------------------------------------------------------
+# run the MFA function from the FactoMineR package
+r.mfa <- FactoMineR::MFA(
+  t(rbind(x1,x2,x3)), # binding the omics types together
+  c(dim(x1)[1], dim(x2)[1], dim(x3)[1]), # specifying the dimensions of each
+  graph=FALSE)
+
+
+## ------------------------------------------------------------------------------------------------------------
+# first, extract the H and W matrices from the MFA run result
+mfa.h <- r.mfa$global.pca$ind$coord
+mfa.w <- r.mfa$quanti.var$coord
+
+# create a dataframe with the H matrix and the CMS label
+mfa_df <- as.data.frame(mfa.h)
+mfa_df$subtype <- factor(covariates[rownames(mfa_df),]$cms_label)
+
+# create the plot
+ggplot2::ggplot(mfa_df, ggplot2::aes(x=Dim.1, y=Dim.2, color=subtype)) +
+ggplot2::geom_point() + ggplot2::ggtitle("Scatter plot of MFA")
+
+
+## ------------------------------------------------------------------------------------------------------------
+pheatmap::pheatmap(t(mfa.h)[1:2,], annotation_col = anno_col,
+                  show_colnames = FALSE,
+                  main="MFA for multi-omics integration")
+
+
+```
+
+### Non negative Matrix Factorization
+
+```{r}
+## ----warning=FALSE-------------------------------------------------------------------------------------------
+# Feature-normalize the data
+x1.featnorm <- x1 / rowSums(x1)
+x2.featnorm <- x2 / rowSums(x2)
+x3.featnorm <- x3 / rowSums(x3)
+
+# Normalize by each omics type's frobenius norm
+matExpr<-x1.featnorm.frobnorm <- x1.featnorm / norm(as.matrix(x1.featnorm), type="F")
+matSNP<-x2.featnorm.frobnorm <- x2.featnorm / norm(as.matrix(x2.featnorm), type="F")
+matCNV<-x3.featnorm.frobnorm <- x3.featnorm / norm(as.matrix(x3.featnorm), type="F")
+
+# Split the features of the CNV matrix into two non-negative features each
+split_neg_columns <- function(df) {
+  n <- dim(df)[1]
+  k <- dim(df)[2]
+  df2 <- matrix(rep(0, n*2*k), ncol=2*k)
+  for (i in 1:k){
+    df2[,2*i-1] <- pmax(df[,i],0)
+    df2[,2*i]   <- pmax(-df[,i], 0)
+  }
+  as.data.frame(df2)
+}
+matCNVpos<- x3.featnorm.frobnorm.nonneg <- t(split_neg_columns(t(x3.featnorm.frobnorm)))
+colnames(matCNVpos) <- colnames(x3.featnorm.frobnorm.nonneg) <- colnames(x3.featnorm.frobnorm)
+
+# run the nmf function from the NMF package
+require(NMF)
+jointNames <-data.frame(exprNames = colnames(matExpr),
+                        snpNames = colnames(matSNP),
+                        cnvNames = colnames(matCNVpos)
+                        )
+jointMat <- rbind(matExpr, matSNP, matCNVpos)
+                     
+r.nmf <- nmf(t(jointMat),
+             2,
+             method='Frobenius')
+```
+
+Extract the H and W matrices from the nmf run result
+
+```{r}
+nmf.h <- NMF::basis(r.nmf)
+nmf.w <- NMF::coef(r.nmf)
+nmfw <- t(nmf.w)
+
+```
+
+Create a dataframe with the H matrix and the CMS label (subtype)
+
+```{r}
+
+nmf_df <- as.data.frame(nmf.h)
+colnames(nmf_df) <- c("dim1", "dim2")
+nmf_df$subtype <- factor(covariates[rownames(nmf_df),]$cms_label)
+```
+
+Create the scatter plot
+
+```{r}
+# 
+ggplot2::ggplot(nmf_df, ggplot2::aes(x=dim1, y=dim2, color=subtype)) +
+ggplot2::geom_point() +
+ggplot2::ggtitle("Scatter plot of 2-component NMF for multi-omics integration")
+
+```
+
+```{r}
+pheatmap::pheatmap(t(nmf_df[,1:2]),
+                   annotation_col = anno_col,
+                   show_colnames=FALSE,
+                   main="Heatmap of 2-component NMF")
+```
+
+
+### iCluster
+
+Sketch of iCluster model. Each omics datatype is decomposed to a coefficient matrix and a shared latent variable matrix, plus noise.
+
+```{r}
+knitr::include_graphics("images/icluster.png" )
+```
+
+
+```{r}
+library(iClusterPlus)
+# run the iClusterPlus function
+r.icluster <- iClusterPlus::iClusterPlus(
+  t(x1), # Providing each omics type
+  t(x2),
+  t(x3),
+  type=c("gaussian", "binomial", "multinomial"), # Providing the distributions
+  K=2, # provide the number of factors to learn
+  alpha=c(1,1,1), # as well as other model parameters
+  lambda=c(.03,.03,.03)
+  )
+# extract the H and W matrices from the run result
+# here, we refer to H as z, to keep with iCluster terminology
+icluster.z <- r.icluster$meanZ
+rownames(icluster.z) <- rownames(covariates) # fix the row names
+icluster.ws <- r.icluster$beta
+# construct a dataframe with the H matrix (z) and the cancer subtypes
+# for later plotting
+icp_df <- as.data.frame(icluster.z)
+colnames(icp_df) <- c("dim1", "dim2")
+rownames(icp_df) <- colnames(x1)
+icp_df$subtype <- factor(covariates[rownames(icp_df),]$cms_label)
+
+```
+
+```{r, moiclusterplusscatter,fig.cap="iCluster+ learns factors which allow tumor sub-types CMS1 and CMS3 to be discriminated.", echo=FALSE}
+
+ggplot2::ggplot(icp_df, ggplot2::aes(x=dim1, y=dim2, color=subtype)) +
+ggplot2::geom_point() +
+ggplot2::ggtitle("Scatter plot of iCluster+ factors")
+```
+
+iCluster+ factors, shown in a heatmap, separate tumors into their subtypes well
+
+```{r}
+pheatmap::pheatmap(t(icp_df[,1:2]),
+                   annotation_col = anno_col, 
+                   show_colnames = FALSE,border_color = NA,
+                   main="Heatmap of iCluster+ factors")
+
+
+## __Want to know more ?__
+
+## - Read the original iCluster paper: Shen R., Olshen A. B., Ladanyi M. (2009). Integrative clustering of multiple genomic data types using a joint latent variable model with application to breast and lung cancer subtype analysis. _Bioinformatics_ 25, 2906–2912. 10.1093/bioinformatics/btp543 https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2800366/
+
+```
+
+iCluster+ learns factors which allow tumor sub-types CMS1 and CMS3 to be discriminated.
+
 ## Clustering using latent factors
 
+### One-Hot Clustering
+
+one-hot clustering assigns each sample the cluster according to its dominant NMF factor.
+
+It is easily accessible using the max.col function
+
+```{r}
+nmf.clusters <- max.col(nmf.h)
+names(nmf.clusters) <- rownames(nmf.h)
+
+# create an annotation data frame indicating the NMF one-hot clusters
+# as well as the cancer subtypes, for the heatmap plot below
+anno_nmf_cl <- data.frame(
+  nmf.cluster=factor(nmf.clusters),
+  cms.subtype=factor(covariates[rownames(nmf.h),]$cms_label)
+)
+
+# generate the plot
+pheatmap::pheatmap(t(nmf.h[order(nmf.clusters),]),
+  cluster_cols=FALSE, cluster_rows=FALSE,
+  annotation_col = anno_nmf_cl,
+  show_colnames = FALSE,border_color=NA,
+  main="Joint NMF factors\nwith clusters and molecular subtypes")
+```
+
+### K-Means
+
+use the kmeans function to cluster the iCluster H matrix (here, z)
+using 2 as the number of clusters.
+
+```{r}
+icluster.clusters <- kmeans(icluster.z, 2)$cluster
+names(icluster.clusters) <- rownames(icluster.z)
+
+# create an annotation dataframe for the heatmap plot
+# containing the kmeans cluster assignments and the cancer subtypes
+anno_icluster_cl <- data.frame(
+  iCluster=factor(icluster.clusters),
+  cms.subtype=factor(covariates$cms_label))
+
+# generate the figure
+pheatmap::pheatmap(
+  t(icluster.z[order(icluster.clusters),]), # order z by the kmeans clusters
+  cluster_cols=FALSE, # use cluster_cols and cluster_rows=FALSE
+  cluster_rows=FALSE, # as we want the ordering by k-means clusters to hold
+  show_colnames = FALSE,border_color=NA,
+  annotation_col = anno_icluster_cl,
+  main="iCluster factors\nwith clusters and molecular subtypes")
+```
+
+
+
+
 ## Biological interpretation of latent factors
+
+### Inspection of feature weights in loading vectors
+
+The Heatmap below shows the association of input features from multi-omics data (gene expression, copy number variation, and mutations), with JNMF factors. Gene expression features dominate both factors, but copy numbers and mutations mostly affect only one factor each.
+
+```{r}
+# create an annotation dataframe for the heatmap
+# for each feature, indicating its omics-type
+data_anno <- data.frame(
+  omics=c(rep('expression',dim(x1)[1]),
+          rep('mut',dim(x2)[1]),
+          rep('cnv',dim(x3.featnorm.frobnorm.nonneg)[1])))
+rownames(data_anno) <- c(rownames(x1),
+                         paste0("mut:", rownames(x2)),
+                         rownames(x3.featnorm.frobnorm.nonneg))
+rownames(nmfw) <- rownames(data_anno)
+# generate the heat map
+pheatmap::pheatmap(nmfw,
+                   cluster_cols = FALSE,
+                   annotation_row = data_anno,
+                   main="NMF coefficients",
+                   clustering_distance_rows = "manhattan",
+                   fontsize_row = 1)
+```
+
+
+### Making sense of factors using enrichment analysis
+
+Enrichment ANalysis provides a view of biological processes of pathways related with selected genes or metagenes
+
+```{r}
+# select genes associated preferentially with each factor
+# by their relative loading in the W matrix
+library(enrichR)
+genes.factor.1 <- names(which(nmfw[1:dim(x1)[1],1] > nmfw[1:dim(x1)[1],2]))
+genes.factor.2 <- names(which(nmfw[1:dim(x1)[1],1] < nmfw[1:dim(x1)[1],2]))
+# call the enrichr function to find gene sets enriched
+# in each latent factor in the GO Biological Processes 2018 library
+go.factor.1 <- enrichr(genes.factor.1,
+                                databases = c("GO_Biological_Process_2018")
+                                )$GO_Biological_Process_2018
+go.factor.2 <- enrichr(genes.factor.2,
+                                databases = c("GO_Biological_Process_2018")
+                                )$GO_Biological_Process_2018
+
+```
+
+The top GO-Terms associated with the selected factors are shown below.
+
+```{r}
+library(kableExtra)
+go.factor.2$Genes <- gsub(";", "; ", go.factor.2$Genes)
+the.table <- knitr::kable(head(go.factor.2, 3)[,c("Term", "Adjusted.P.value", "Combined.Score")],
+                 caption="GO-terms associated with NMF factor 2",
+                 format="latex")
+#the.table <- kableExtra::column_spec(the.table, 1, width="10em")
+the.table <- kableExtra::kable_styling(the.table ,latex_options = c( "scale_down"))
+#the.table <- kableExtra::column_spec(the.table, 4, width="10em")
+the.table
+```
+
+### Relating factors with clinical covariates
+
+Box plot showing MSI/MSS status distribution and NMF factor 1 values
+
+```{r}
+# create a data frame holding covariates (age, gender, MSI status)
+a <- data.frame(age=covariates$age,
+                gender=as.numeric(covariates$gender),
+                msi=covariates$msi)
+b <- nmf.h
+colnames(b) <- c('factor1', 'factor2')
+# concatenate the covariate dataframe with the H matrix
+cov_factor <- cbind(a,b)
+# generate the figure
+ggplot2::ggplot(cov_factor, ggplot2::aes(x=msi, y=factor1, group=msi)) +
+  ggplot2::geom_boxplot() +
+  ggplot2::ggtitle("NMF factor 1 microsatellite instability")
+```
+
+Box plot showing MSI/MSS status distribution and NMF factor 2 values.
+
+```{r}
+ggplot2::ggplot(cov_factor, ggplot2::aes(x=msi, y=factor2, group=msi)) +
+  ggplot2::geom_boxplot() +
+  ggplot2::ggtitle("NMF factor 2 and microsatellite instability")
+
+```
+
+
 
 ## Exercises
