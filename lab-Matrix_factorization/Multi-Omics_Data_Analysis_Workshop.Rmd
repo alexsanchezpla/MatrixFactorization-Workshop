@@ -1,0 +1,326 @@
+---
+title: Multi-Omics Data Analysis Workshop
+author: "Alex Sanchez-Pla, Francesc Carmona, Pol Castellano"
+date: "July 2021"
+output:
+# prettydoc::html_pretty:
+   html_document:
+    code_folding: hide
+    toc: true
+    toc_depth: 3
+    theme: darkly
+    highlight: textmate
+    number_sections: true
+editor_options: 
+  chunk_output_type: console
+# bibliography: references.bib
+# link-citations: yes
+# theme args should be one of: "default", "cerulean", "journal", "flatly", "darkly", "readable", "spacelab", "united", "cosmo", "lumen", "paper", "sandstone", "simplex", "yeti"
+# highlight arg should be one of: "default", "tango", "pygments", "kate", "monochrome", "espresso", "zenburn", "haddock", "breezedark", "textmate"
+---
+
+```{r setup, include=FALSE}
+require(knitr)
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, comment = NA, prompt = TRUE, tidy = FALSE, fig.width = 7, fig.height = 7, fig_caption = TRUE,cache=FALSE)
+Sys.setlocale("LC_TIME", "C")
+```
+
+```{r packages, include=FALSE}
+# require(devtools)
+# if(!require(installifnot)) install_github("uebvhir/installifnot")
+
+# library("bibtex")
+```
+
+# Workshop structure
+
+## Instructor Names
+
+Alex, Paco, Pol
+
+## Workshop Description
+
+### Pre-requisites
+
+### Workshop Participation
+
+Execution of example code and hands-on practice
+
+### R/Bioconductor packages needed
+
+The following block of code will install the packages needed for the workshop.
+
+```{r}
+if(!requireNamespace(BiocManager)){
+      install.packages("BiocManager", dep=TRUE)
+}
+
+installifnot <- function (pckgName, BioC=TRUE){
+  if(BioC){
+    if(!requireNamespace(pckgName, character.only=TRUE)){
+      BiocManager::install(pckgName)
+    }
+  }else{
+    if(!requireNamespace(pckgName, character.only=TRUE)){
+      install.packages(pckgName, dep=TRUE)
+    }
+  }
+}
+installifnot("devtools", BioC=FALSE)
+installifnot("knitr", BioC=FALSE)
+installifnot("ggplot2", BioC=FALSE)
+installifnot("dplyr", BioC=FALSE)
+installifnot("fastICA", BioC=FALSE)
+installifnot("Rtsne", BioC=FALSE)
+installifnot("NMF", BioC=FALSE)
+installifnot("matrixStats", BioC=FALSE)
+installifnot("FactoMineR", BioC=FALSE)
+installifnot("iClusterPlus", BioC=FALSE)
+installifnot("NbClust", BioC=FALSE)
+
+installifnot("org.Hs.eg.db")
+installifnot("SummarizedExperiment")
+installifnot("pheatmap")
+installifnot("clusterProfiler")
+
+devtools::install_github("compgenomr/compGenomRData")
+```
+
+
+### Time outline
+
+## Workshop goals and objectives
+
+### Learning goals
+
+### Learning objectives
+
+## Resources and links
+
+### Bioc-2018
+
+<https://bioconductor.github.io/BiocWorkshops/workflow-for-multi-omics-analysis-with-multiassayexperiment.html>
+
+<https://bioconductor.github.io/BiocWorkshops/functional-enrichment-analysis-of-high-throughput-omics-data.html>
+
+# Part I. Exploratory Analysis of Single Omics Datasets with Unsupervised methods
+
+## Use case. Studying leukemia using gene expression microarrays
+
+Start getting the data 
+
+```{r}
+library (compGenomRData)
+library(pheatmap)
+expFile=system.file("extdata","leukemiaExpressionSubset.rds",
+                    package="compGenomRData")
+mat=readRDS(expFile)
+dim(mat)
+# canType<- substr(colnames(mat),1,3)
+# sampleNum <- substr(colnames(mat),11,13)
+# colnames(mat)<- paste(canType,sampleNum, sep="_")
+# table(canType)
+# head(mat)
+# # set the leukemia type annotation for each sample
+annotation_col = data.frame(
+                    LeukemiaType =substr(colnames(mat),1,3))
+rownames(annotation_col)=colnames(mat)
+```
+
+## Visualizing complex datasets in reduced dimension
+
+Gene expression is not independent between genes
+```{r}
+## ----scatterb4PCA,out.width='60%',fig.width=5.5, fig.cap="Gene expression values of CD33 and PYGL genes across leukemia patients."----
+plot(mat[rownames(mat)=="ENSG00000100504",],
+     mat[rownames(mat)=="ENSG00000105383",],pch=19,
+     ylab="CD33 (ENSG00000105383)",
+     xlab="PYGL (ENSG00000100504)")
+```
+
+
+### Principal Components Analysis and SVD
+
+PCA provides a new coordinate system where "eigenGenes", whatever they are, become independent.
+
+```{r}
+## ----pcaRot,out.width='60%',fig.width=8.5,fig.cap="Geometric interpretation of PCA finding eigenvectors that point to the direction of highest variance. Eigenvectors can be used as a new coordinate system."----
+par(mfrow=c(1,2))
+# create the subset of the data with two genes only
+# notice that we transpose the matrix so samples are 
+# on the columns
+sub.mat=t(mat[rownames(mat) %in% c("ENSG00000100504","ENSG00000105383"),])
+# ploting our genes of interest as scatter plots
+plot(scale(mat[rownames(mat)=="ENSG00000100504",]),
+     scale(mat[rownames(mat)=="ENSG00000105383",]),
+     pch=19,
+     ylab="CD33 (ENSG00000105383)",
+     xlab="PYGL (ENSG00000100504)",
+     col=as.factor(annotation_col$LeukemiaType),
+     xlim=c(-2,2),ylim=c(-2,2))
+# create the legend for the Leukemia types
+legend("bottomright",
+       legend=unique(annotation_col$LeukemiaType),
+       fill =palette("default"),
+       border=NA,box.col=NA)
+# calculate the PCA only for our genes and all the samples
+pr=princomp(scale(sub.mat))
+# plot the direction of eigenvectors
+# pr$loadings returned by princomp has the eigenvectors
+arrows(x0=0, y0=0, x1 = pr$loadings[1,1], 
+         y1 = pr$loadings[2,1],col="pink",lwd=3)
+arrows(x0=0, y0=0, x1 = pr$loadings[1,2], 
+         y1 = pr$loadings[2,2],col="gray",lwd=3)
+# plot the samples in the new coordinate system
+plot(-pr$scores,pch=19,
+     col=as.factor(annotation_col$LeukemiaType),
+     ylim=c(-2,2),xlim=c(-4,4))
+# plot the new coordinate basis vectors
+arrows(x0=0, y0=0, x1 =-2, 
+         y1 = 0,col="pink",lwd=3)
+arrows(x0=0, y0=0, x1 = 0, 
+         y1 = -1,col="gray",lwd=3)
+
+```
+
+PCA is done either by the eigen decomposition of the covariance matrix or the SVD of the data.
+
+```{r}
+## ----eigenOnCovMat,eval=FALSE--------------------------------------------------------------------------------
+## cov.mat=cov(sub.mat) # calculate covariance matrix
+## cov.mat
+## eigen(cov.mat) # obtain eigen decomposition for eigen values and vectors
+```
+
+
+```{r}
+## ----SVDcartoon,echo=FALSE,fig.align='center',out.width='60%',fig.cap="Singular value decomposition (SVD) explained in a diagram. "----
+knitr::include_graphics("images/SVDcartoon.png")
+```
+
+```{r}
+## ----svd,out.width='65%',fig.width=8.5,fig.cap="SVD on the matrix and its transpose"-------------------------
+par(mfrow=c(1,2))
+d=svd(scale(mat)) # apply SVD
+assays=t(d$u) %*% scale(mat) # projection on eigenassays
+plot(assays[1,],assays[2,],pch=19,
+     col=as.factor(annotation_col$LeukemiaType))
+#plot(d$v[,1],d$v[,2],pch=19,
+#     col=annotation_col$LeukemiaType)
+pr=prcomp(t(mat),center=TRUE,scale=TRUE) # apply PCA on transposed matrix
+# plot new coordinates from PCA, projections on eigenvectors
+# since the matrix is transposed eigenvectors represent 
+plot(pr$x[,1],pr$x[,2],col=as.factor(annotation_col$LeukemiaType))
+
+```
+
+
+
+
+```{r out.width='70%',fig.cap= "Singular value decomposition (SVD) reorganized as multiplication of m-by-n weights matrix and eigenvectors"}
+knitr::include_graphics("images/SVDasWeights.png")
+```
+
+```{r, fig.cap="Gene expression of a gene can be regarded as a linear combination of eigenvectors. "}
+knitr::include_graphics("images/SVDlatentExample.png")
+```
+
+
+
+### Independent Components ANalysis (ICA)
+
+```{r, fig.cap="Independent Component Analysis (ICA)" }
+knitr::include_graphics("images/ICAcartoon.png")
+```
+
+
+```{r, out.width='50%',fig.width=5,fig.cap="Leukemia gene expression values per patient on reduced dimensions by ICA."}
+## ----fastICAex, ----
+library(fastICA)
+ica.res=fastICA(t(mat),n.comp=2) # apply ICA
+# plot reduced dimensions
+plot(ica.res$S[,1],ica.res$S[,2],col=as.factor(annotation_col$LeukemiaType))
+```
+
+### Non-negative matrix factorization
+
+```{r, fig.cap="Non-negative matrix factorization summary",out.width='70%'}
+knitr::include_graphics("images/NMFcartoon.png")
+```
+
+Leukemia gene expression values per patient on reduced dimensions by NMF. Components 1 and 3 is used for the plot.
+
+```{r}
+library(NMF)
+res=NMF::nmf(mat,rank=3,seed="nndsvd") # nmf with 3 components/factors
+w <- basis(res) # get W
+h <- coef(res)  # get H
+# plot 1st factor against 3rd factor
+plot(h[1,],h[3,],col=as.factor(annotation_col$LeukemiaType),pch=19)
+
+
+## __Want to know more ?__
+
+## The NMF package vignette has extensive information on how to run NMF to get stable results and an estimate of components: https://cran.r-project.org/web/packages/NMF/vignettes/NMF-vignette.pdf
+
+```
+
+### Multidimensional Scaling
+
+```{r }
+## ----mds2,out.width='60%',fig.width=8.5,fig.cap="Leukemia gene expression values per patient on reduced dimensions by classical MDS and isometric MDS."----
+mds=cmdscale(dist(t(mat)))
+isomds=MASS::isoMDS(dist(t(mat)))
+# plot the patients in the 2D space
+par(mfrow=c(1,2))
+plot(mds,pch=19,col=as.factor(annotation_col$LeukemiaType),
+     main="classical MDS")
+plot(isomds$points,pch=19,col=as.factor(annotation_col$LeukemiaType),
+     main="isotonic MDS")
+```
+
+### t-SNE
+
+```{r }
+## ----tsne,eval=TRUE, out.width='60%',fig.width=5, fig.cap="t-SNE of leukemia expression dataset"-------------
+library("Rtsne")
+set.seed(42) # Set a seed if you want reproducible results
+tsne_out <- Rtsne(t(mat),perplexity = 10) # Run TSNE
+ #image(t(as.matrix(dist(tsne_out$Y))))
+# Show the objects in the 2D tsne representation
+plot(tsne_out$Y,col=as.factor(annotation_col$LeukemiaType),
+     pch=19)
+# create the legend for the Leukemia types
+legend("bottomleft",
+       legend=unique(annotation_col$LeukemiaType),
+       fill =palette("default"),
+       border=NA,box.col=NA)
+
+
+## __Want to know more ?__
+
+## - How perplexity affects t-sne, interactive examples:  https://distill.pub/2016/misread-tsne/
+
+## - More on perplexity: https://blog.paperspace.com/dimension-reduction-with-t-sne/
+
+## - Intro to t-SNE: https://www.oreilly.com/learning/an-illustrated-introduction-to-the-t-sne-algorithm
+
+```
+
+
+
+## Exercises
+
+# Part II. Multi-Omics Analysis
+
+## Use case: multi-omics data for colo-rectal cancer
+
+## Latent variable models for multi-omics data integration
+
+## Matrix factorization methods for unsupervised multiomics integration
+
+## Clustering using latent factors
+
+## Biological interpretation of latent factors
+
+## Exercises

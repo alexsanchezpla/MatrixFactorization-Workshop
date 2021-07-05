@@ -1,0 +1,177 @@
+---
+title: |
+    | _Data Integration in Bioinformatics and Biomedicines_
+    | Review and Open Problems 
+author: "Alex Sanchez-Pla (Esteban, Paco, Ferran B, Jordi)"
+date: "Juliol 2021"
+output:
+ prettydoc::html_pretty:
+    toc: true
+    toc_depth: 3
+    theme: cayman
+    highlight: github
+    number_sections: true
+editor_options: 
+  chunk_output_type: console
+# bibliography: references.bib
+# link-citations: yes
+---
+
+```{r setup, include=FALSE}
+require(knitr)
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, comment = NA, prompt = TRUE, tidy = FALSE, fig.width = 7, fig.height = 7, fig_caption = TRUE,cache=FALSE)
+Sys.setlocale("LC_TIME", "C")
+```
+
+```{r packages, include=FALSE}
+# require(devtools)
+# if(!require(installifnot)) install_github("uebvhir/installifnot")
+
+library("bibtex")
+```
+
+# Estructura de la xerrada
+
+## Motivació
+
+-   Un problema que ens preocupa des de fa més d'una dècada és: *Quina és la millor forma de fer d'integrar el màxim d'informació possible per respondre una pregunta científica (sigui el que sigui això)*.
+
+-   Amb els anys no l'hem respost (o només en part) però hem anat veient com aquesta pregunta es podia reformular de moltes maneres en situacions ben diverses.
+
+    -   Metilació / L-Shape
+
+    -   goProfiles
+
+    -   FOBI
+
+    -   Smartfood?
+
+-   En aquesta xerrada farem una revisió d'algunes aproximacions a la pregunta i a la respostes tan des d'una **perspectiva general** com a **través d'alguns dels projectes** en què ens veiem implicats com SAMANTHA, EOSC-Life, VEIS, IMPACT o DARWIN. En concret tocarem dos grans temes.
+
+-   D'una banda parlarem del que anomenem *anàlisi integrativa de dades* que, tan en el camp de les òmiques com no òmiques, adquireix molta rellevància amb la creixent disponibilitat de dades de moltes fonts.
+
+    -   Revisarem algunes aproximacions, principalment des de l'òptica de l'Anàlis i Multivariant
+
+    -   Començarem amb l'aproximació del "Enter the Matrix" (que tambés és la de compgenomr) que posa el focus en "revelar la low-dimensional structure" dels "Complex Biological Processes".
+
+        -   Revisarem l'enfoc del Gilbert Strang: "Tot és factorització"
+
+            -   Les factoritzacions habituals i com la cols\*rows approach porta a la suma de matrius de rang 1
+
+        -   Lligarem aixo amb l'Enter the Matrix
+
+        -   Parlarem de SVD, PCA i aproximacions amb les que despres ens anem a ensopegar com NMF, t-SNE, UMAP, ...
+
+    -   Passarem dels mètodes matricials als multi-matricials
+
+        -   MFA (i l'aplicació del Toni)
+
+        -   AFC(i l'aplicació COVID)
+
+        -   Altres que no solem emprar pero que apareixen a compgenomr
+
+    -   Comentarem alguns problemes oberts en els que voldríem o estem treballant.
+
+        -   Ús d'informació biològica
+
+            -   Tesi Ferran
+
+            -   compgenomr (part final capitol 11)
+
+        -   tensor factorization with block missing values
+
+        -   PREGUNTA: QUines alternaties ofereix el deep learning
+
+-   HA SORGIT EL TEMA DE LES DADES ARTIFICIALS
+
+    -   Puc lligar-ho aquí
+
+-   D'altra banda parlarem d'un problema interessant i delicat: com integrar dades d'històries clíniques amb altres -per exemple genòmiques- per a la medicina personalitzada. El desig de crear grans cohorts nacionals i multinacionals d'aquestes característiques porta a importants conflictes tècnics i legals que es miren de resoldre mitjançant diverses aproximacions com la creació de protocols d'intercanvi de dades (el llenguatge OMOP al projecte EHDEN) o la introducció de tècniques d'anàlisi federades que prometen ser una de les claus per a la introducció de la IA en aquest àmbit.
+
+    -   Òmiques i Clíniques
+
+        -   Com accedir/analitzar a múltiples datasets de diferents tipus incloent
+
+            -   Temes de privacitat
+            -   Multiplicitat de bases de dades/formats
+
+        -   Exemples del projecte IMPACT i dels projectes del VH
+
+        -   Projecte EOSC,
+
+        -   Tesi Miriam
+
+        -   Projecte EHDEN/OMOP
+
+        -   Projecte Darwin
+
+        -   Dades artificials i DIGUMET
+
+    -   Multimodals clíniques
+
+        -   Com combinar dades sensibles heterogènies entre múltiples fonts?
+        -   Exemple: Projecte PADRIS FarmaCOVID
+
+## Solucions, Eines i Problemes Oberts
+
+-   La integració de dades òmiques ha estat un terreny molt actiu en els darrers quinze anys
+
+    <https://github.com/mikelove/awesome-multi-omics>
+
+-   Diguem que, donat un estudi on disposem de dades multiòmiques sabem com procedir
+
+    -   mixOmics, FactoMineR, ...
+
+-   De totes formes el que fem,
+
+    -   Està bé,
+    -   Però no és la Pera: Rarament indueix un canvi qualitatiu entre tenir/no tenir resultats
+
+-   Apart que costa d'aplicar a "Real World Data" ja que necessita dades 3-(N-) way completes
+
+-   En conseqüència, més que pensar en el mètode nº nnn
+
+    -   Ens enfoquem en com millorar la interpretació de les dades
+
+        -   Per això mirem d'integrar les anotacions en l'anàlisi
+
+            -   goProfiles-NextSeq
+            -   FOBI / FOBITools
+            -   IntegrANOT
+
+    -   Estudiarem com aprofitar la informació finms i tot quan està incomplerta
+
+    -   Mirem d'estendre la metodologia a altres àmbits com l'hospitalari on les òmiques tot just estan entrant (en certs camps, en altres ja hi són fa temps).
+
+        -   Construïm eines que simplifiquin els processos
+
+            -   TransVHIR
+            -   UEBflow
+
+## Pla de treball
+
+-   Explicar de forma genèrica el tema de la integració
+
+    -   Factor the matrix
+    -   From sinmple tu multiple decomposition
+    -   Exemple
+
+-   Fer una passejada, poc tècnica pels problemes oberts
+
+    -   Revisar les dificultats
+    -   QUines propostes hi ha
+    -   QUines son les nostres propostes
+
+## El que hem fet/farem nosaltres
+
+-   Perspectives futures
+
+    -   Big Data / IA: segurament resoldran alguns problemes
+
+## Enllaços interessants
+
+-   Fer google amb el terme: "Multi-omics Analysis Computational Genomics with R". Amb el que hi surt n'hi ha prou :-()
+
+## Referències
+
+## Agraïments

@@ -1,0 +1,1058 @@
+---
+title: 'Matrix factorizations for Omics and Multi-omics Analysis'
+subtitle: 'From the book _Computational Genomics with R_ by Altuna Akalin'
+author: "adapted by Francesc Carmona and Alex Sanchez"
+date: "2021-02-20"
+output:
+ prettydoc::html_pretty:
+    toc: true
+    toc_depth: 3
+    theme: cayman
+    highlight: github
+    number_sections: true
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+```{r}
+setwd("lab-Matrix_factorization")
+```
+
+
+```{r}
+# install.packages("fastICA", "NMF", "Rtsne", dep=TRUE)
+```
+
+# Use case: Exploratory data analysis with Matrix Factorisation
+
+```{r}
+library (compGenomRData)
+library(pheatmap)
+expFile=system.file("extdata","leukemiaExpressionSubset.rds",
+                    package="compGenomRData")
+mat=readRDS(expFile)
+dim(mat)
+# canType<- substr(colnames(mat),1,3)
+# sampleNum <- substr(colnames(mat),11,13)
+# colnames(mat)<- paste(canType,sampleNum, sep="_")
+# table(canType)
+# head(mat)
+# # set the leukemia type annotation for each sample
+annotation_col = data.frame(
+                    LeukemiaType =substr(colnames(mat),1,3))
+rownames(annotation_col)=colnames(mat)
+```
+
+## Dimensionality reduction techniques: Visualizing complex data sets in 2D
+
+In statistics, dimension reduction techniques are a set of processes for reducing the number of random variables by obtaining a set of principal variables. For example, in the context of a gene expression matrix across different patient samples, this might mean getting a set of new variables that cover the variation in sets of genes. This way samples can be represented by a couple of principal variables instead of thousands of genes. This is useful for visualization, clustering and predictive modeling.\index{dimensionality reduction}
+
+### Principal component analysis 
+
+Principal component analysis (PCA)\index{principal component analysis (PCA)} is maybe the most popular technique to examine high-dimensional data. There are multiple interpretations of how PCA reduces dimensionality. We will first focus on geometrical interpretation, where this operation can be interpreted as rotating the original dimensions of the data. For this, we go back to our example gene expression data set. In this example, we will represent our patients with expression profiles of just two genes, CD33 (ENSG00000105383) and PYGL (ENSG00000100504). This way we can visualize them in a scatter plot (see Figure \@ref(fig:scatterb4PCA)). 
+
+```{r scatterb4PCA,out.width='60%',fig.width=5.5, fig.cap="Gene expression values of CD33 and PYGL genes across leukemia patients."}
+plot(mat[rownames(mat)=="ENSG00000100504",],
+     mat[rownames(mat)=="ENSG00000105383",],pch=19,
+     ylab="CD33 (ENSG00000105383)",
+     xlab="PYGL (ENSG00000100504)")
+```
+PCA rotates the original data space such that the axes of the new coordinate system point to the directions of highest variance of the data. The axes or new variables are termed principal components (PCs) and are ordered by variance: The first component, PC 1, represents the direction of the highest variance of the data. The direction of the second component, PC 2, represents the highest of the remaining variance orthogonal to the first component. This can be naturally extended to obtain the required number of components, which together span a component space covering the desired amount of variance. In our toy example with only two genes, the principal components are drawn over the original scatter plot and in the next plot we show the new coordinate system based on the principal components. We will calculate the PCA with the `princomp()` function; this function returns the new coordinates as well. These new coordinates are simply a projection of data over the new coordinates. We will decorate the scatter plots with eigenvectors showing the direction of greatest variation. Then, we will plot the new coordinates (the resulting plot is shown in Figure \@ref(fig:pcaRot)). These are automatically calculated by the `princomp()` function. Notice that we are using the `scale()` function when plotting coordinates and also before calculating the PCA. This function centers the data, meaning it subtracts the mean of each column vector from the elements in the vector. This essentially gives the columns a zero mean. It also divides the data by the standard deviation of the centered columns. These two operations help bring the data to a common scale, which is important for PCA not to be affected by different scales in the data.
+
+```{r pcaRot,out.width='60%',fig.width=8.5,fig.cap="Geometric interpretation of PCA finding eigenvectors that point to the direction of highest variance. Eigenvectors can be used as a new coordinate system."}
+par(mfrow=c(1,2))
+# create the subset of the data with two genes only
+# notice that we transpose the matrix so samples are 
+# on the columns
+sub.mat=t(mat[rownames(mat) %in% c("ENSG00000100504","ENSG00000105383"),])
+# ploting our genes of interest as scatter plots
+plot(scale(mat[rownames(mat)=="ENSG00000100504",]),
+     scale(mat[rownames(mat)=="ENSG00000105383",]),
+     pch=19,
+     ylab="CD33 (ENSG00000105383)",
+     xlab="PYGL (ENSG00000100504)",
+     col=as.factor(annotation_col$LeukemiaType),
+     xlim=c(-2,2),ylim=c(-2,2))
+# create the legend for the Leukemia types
+legend("bottomright",
+       legend=unique(annotation_col$LeukemiaType),
+       fill =palette("default"),
+       border=NA,box.col=NA)
+# calculate the PCA only for our genes and all the samples
+pr=princomp(scale(sub.mat))
+# plot the direction of eigenvectors
+# pr$loadings returned by princomp has the eigenvectors
+arrows(x0=0, y0=0, x1 = pr$loadings[1,1], 
+         y1 = pr$loadings[2,1],col="pink",lwd=3)
+arrows(x0=0, y0=0, x1 = pr$loadings[1,2], 
+         y1 = pr$loadings[2,2],col="gray",lwd=3)
+# plot the samples in the new coordinate system
+plot(-pr$scores,pch=19,
+     col=as.factor(annotation_col$LeukemiaType),
+     ylim=c(-2,2),xlim=c(-4,4))
+# plot the new coordinate basis vectors
+arrows(x0=0, y0=0, x1 =-2, 
+         y1 = 0,col="pink",lwd=3)
+arrows(x0=0, y0=0, x1 = 0, 
+         y1 = -1,col="gray",lwd=3)
+```
+As you can see, the new coordinate system is useful by itself. The X-axis, which represents the first component, separates the data along the lymphoblastic and myeloid leukemias.\index{principal component analysis (PCA)}
+
+PCA in this case, is obtained by calculating eigenvectors of the covariance matrix via an operation called eigen decomposition. The covariance matrix is obtained by covariance of pairwise variables of our expression matrix, which is simply ${ \operatorname{cov} (X,Y)={\frac {1}{n}}\sum _{i=1}^{n}(x_{i}-\mu_X)(y_{i}-\mu_Y)}$, where $X$ and $Y$ are expression values of genes in a sample in our example. This is a measure of how things vary together, if highly expressed genes in sample A are also highly expressed in sample B and lowly expressed in sample A are also lowly expressed in sample B, then sample A and B will have positive covariance. If the opposite is true, then they will have negative covariance. This quantity is related to correlation, and as we saw in the previous chapter, correlation is standardized covariance. Covariance of variables can be obtained with the `cov()` function, and eigen decomposition of such a matrix will produce a set of orthogonal vectors that span the directions of highest variation. In 2D, you can think of this operation as rotating two perpendicular lines  together until they point to the directions where most of the variation in the data lies, similar to Figure \@ref(fig:pcaRot). An important intuition is that, after the rotation prescribed by eigenvectors is complete, the covariance between variables in this rotated dataset will be zero. There is a proper mathematical relationship between covariances of the rotated dataset and the original dataset. That's why operating on the covariance matrix is related to the rotation of the original dataset.
+
+```{r eigenOnCovMat,eval=FALSE}
+cov.mat=cov(sub.mat) # calculate covariance matrix
+cov.mat
+eigen(cov.mat) # obtain eigen decomposition for eigen values and vectors
+```
+
+Eigenvectors and eigenvalues of the covariance matrix indicate the direction and the magnitude of variation of the data. In our visual example, the eigenvectors are so-called principal components. The eigenvector indicates the direction and the eigenvalues indicate the variation in that direction. Eigenvectors and values exist in pairs: every eigenvector has a corresponding eigenvalue and the eigenvectors are linearly independent from each other, which means they are orthogonal or uncorrelated as in our working example above. The eigenvectors are ranked by their corresponding eigenvalue, the higher the eigenvalue the more important the eigenvector is, because it explains more of the variation compared to the other eigenvectors. This feature of PCA makes the dimension reduction possible. We can sometimes display data sets that have many variables only in 2D or 3D because these top eigenvectors are sometimes enough to capture most of variation in the data. The `screeplot()` function takes the output of the `princomp()` or `prcomp()` functions as input and plots the variance explained by eigenvectors.
+
+#### Singular value decomposition and principal component analysis
+A more common way to calculate PCA is through something called singular value decomposition (SVD). \index{singular value decomposition (SVD)}This results in another interpretation of PCA, which is called "latent factor" or "latent component" interpretation. In a moment, it \index{principal component analysis (PCA)} will be clearer what we mean by "latent factors". SVD is a matrix factorization or decomposition algorithm that decomposes an input matrix,$X$, to three matrices as follows: $\displaystyle \mathrm{X} = USV^T$. In essence, many matrices can be decomposed as a product of multiple matrices and we will come to other techniques later in this chapter. Singular value decomposition is shown in Figure \@ref(fig:SVDcartoon). $U$ is the matrix with eigenarrays on the columns and this has the same dimensions as the input matrix; you might see elsewhere the columns are called eigenassays. $S$ is the matrix that contains the singular values on the diagonal. The singular values are also known as eigenvalues and their square is proportional to explained variation by each eigenvector. Finally, the matrix $V^T$ contains the eigenvectors on its rows. Its interpretation is still the same. Geometrically, eigenvectors point to the direction of highest variance in the data. They are uncorrelated or geometrically orthogonal to each other. These interpretations are identical to the ones we made before. The slight difference is that the decomposition seems to output $V^T$, which is just the transpose of the matrix $V$. However, the SVD algorithms in R usually return the matrix $V$. If you want the eigenvectors, you either simply use the columns of matrix $V$ or rows of $V^T$. 
+```{r SVDcartoon,echo=FALSE,fig.align='center',out.width='60%',fig.cap="Singular value decomposition (SVD) explained in a diagram. "}
+knitr::include_graphics("images/SVDcartoon.png")
+```
+One thing that is new in Figure \@ref(fig:SVDcartoon) is the concept of eigenarrays. The eigenarrays, sometimes called eigenassays, represent the sample space and can be used to plot the relationship between samples rather than genes. In this way, SVD offers additional information than the PCA using the covariance matrix. It offers us a way to summarize both genes and samples. As we can project the gene expression profiles over the top two eigengenes and get a 2D representation of genes, but with the SVD, we can also project the samples over the top two eigenarrays and get a representation of samples in 2D scatter plot. The eigenvector could represent independent expression programs across samples, such as cell-cycle, if we had time-based expression profiles. However, there is no guarantee that each eigenvector will be biologically meaningful. Similarly each eigenarray represents samples with specific expression characteristics. For example, the samples that have a particular pathway activated might be correlated to an eigenarray returned by SVD. 
+
+Previously, in order to map samples to the reduced 2D space we had to transpose the genes-by-samples matrix before using the `princomp()` function. We will now first use SVD on the genes-by-samples matrix to get eigenarrays and use that to plot samples on the reduced dimensions. We will project the columns in our original expression data on eigenarrays and use the first two dimensions in the scatter plot. If you look at the code you will see that for the projection we use $U^T  X$ operation, which is just $S V^T$ if you follow the linear algebra. We will also perform the PCA this time with the `prcomp()` function on the transposed genes-by-samples matrix to get similar information, and plot the samples on the reduced coordinates.
+
+```{r svd,out.width='65%',fig.width=8.5,fig.cap="SVD on the matrix and its transpose"}
+par(mfrow=c(1,2))
+d=svd(scale(mat)) # apply SVD
+assays=t(d$u) %*% scale(mat) # projection on eigenassays
+plot(assays[1,],assays[2,],pch=19,
+     col=as.factor(annotation_col$LeukemiaType))
+#plot(d$v[,1],d$v[,2],pch=19,
+#     col=annotation_col$LeukemiaType)
+pr=prcomp(t(mat),center=TRUE,scale=TRUE) # apply PCA on transposed matrix
+# plot new coordinates from PCA, projections on eigenvectors
+# since the matrix is transposed eigenvectors represent 
+plot(pr$x[,1],pr$x[,2],col=as.factor(annotation_col$LeukemiaType))
+```
+As you can see in Figure \@ref(fig:svd), the two approaches yield separation of samples, although they are slightly different. The difference comes from the centering and scaling. In the first case, we scale and center columns and in the second case we scale and center rows since the matrix is transposed. If we do not do any scaling or centering we would get identical plots.
+
+##### Eigenvectors as latent factors/variables
+Finally, we can introduce the latent factor interpretation of PCA via SVD. As we have already mentioned, eigenvectors can also be interpreted as expression programs that are shared by several genes such as cell cycle expression program when measuring gene expression across samples taken in different time points. In this interpretation, linear combination of expression programs makes up the expression profile of the genes. Linear combination simply means multiplying the expression program with a weight and adding them up. Our $USV^T$ matrix multiplication can be rearranged to yield such an understanding, we can multiply eigenarrays $U$ with the diagonal eigenvalues $S$, to produce an m-by-n weights matrix called $W$, so $W=US$ and we can re-write the equation as just weights by eigenvectors matrix, $X=WV^T$ as shown in Figure \@ref(fig:SVDasWeigths).
+```{r SVDasWeigths,echo=FALSE,out.width='70%',fig.cap="Singular value decomposition (SVD) reorganized as multiplication of m-by-n weights matrix and eigenvectors "}
+knitr::include_graphics("images/SVDasWeights.png")
+```
+This simple transformation now makes it clear that indeed, if eigenvectors represent expression programs, their linear combination makes up individual gene expression profiles. As an example, we can show the linear combination of the first two eigenvectors can approximate the expression profile of a hypothetical gene in the gene expression matrix. Figure \@ref(fig:SVDlatentExample) shows eigenvector 1 and eigenvector 2 combined with certain weights in $W$ matrix can approximate gene expression pattern our example gene.
+```{r SVDlatentExample,echo=FALSE,fig.cap="Gene expression of a gene can be regarded as a linear combination of eigenvectors. "}
+knitr::include_graphics("images/SVDlatentExample.png")
+```
+However, SVD does not care about biology. The eigenvectors are just obtained from the data with constraints of orthogonality and the direction of variation. There are examples of eigenvectors representing
+real expression programs but that does not mean eigenvectors will always be biologically meaningful. Sometimes a combination of them might make more sense in biology than single eigenvectors. This is also the same for the other matrix factorization techniques we describe below. 
+
+
+### Other matrix factorization methods for dimensionality reduction
+We must mention a few other techniques that are similar to SVD in spirit. Remember, we mentioned that every matrix can be decomposed to other matrices where matrix multiplication operations reconstruct the original matrix, which is in general called "matrix factorization"\index{matrix factorization}. In the case of SVD/PCA, the constraint is that eigenvectors/arrays are orthogonal, however, there are other decomposition algorithms with other constraints.
+
+#### Independent component analysis (ICA)
+We will first start with independent component analysis (ICA)\index{Independent component analysis} which is an extension of PCA. ICA algorithm decomposes a given matrix $X$ as follows: $X=SA$ [@hyvarinen2013independent]. The rows of $A$ could be interpreted similar to the eigengenes and columns of $S$ could be interpreted as eigenarrays. These components are sometimes called metagenes and metasamples in the literature. Traditionally, $S$ is called the source matrix and $A$ is called mixing matrix. ICA is developed for a problem called "blind-source separation". In this problem, multiple microphones record sound from multiple instruments, and the task is to disentangle sounds from original instruments since each microphone is recording a combination of sounds. In this respect, the matrix $S$ contains the original signals (sounds from different instruments) and their linear combinations identified by the weights in $A$, and the product of $A$ and $S$ makes up the matrix $X$, which is the observed signal from different microphones. With this interpretation in mind, if the interest is strictly expression patterns that represent the hidden expression programs, we see that the genes-by-samples matrix is transposed to a samples-by-genes matrix, so that the columns of $S$ represent these expression patterns, here referred to as "metagenes", hopefully representing distinct expression programs (Figure \@ref(fig:ICAcartoon) ). \index{independent component analyis (ICA)}
+```{r ICAcartoon,echo=FALSE,fig.cap="Independent Component Analysis (ICA)"}
+knitr::include_graphics("images/ICAcartoon.png")
+```
+
+
+ICA requires that the columns of the $S$ matrix, the "metagenes" in our example above, are statistically independent. This is a stronger constraint than uncorrelatedness. In this case, there should be no relationship between non-linear transformation of the data either. There are different ways of ensuring this statistical indepedence and this is the main constraint when finding the optimal $A$ and $S$ matrices. The various ICA algorithms use different proxies for statistical independence, and the definition of that proxy is the main difference between many ICA algorithms. The algorithm we are going to use requires that metagenes or sources in the $S$ matrix are non-Gaussian (non-normal) as possible. Non-Gaussianity is shown to be related to statistical independence [@hyvarinen2013independent]. Below, we are using the `fastICA::fastICA()` function to extract 2 components and plot the rows of matrix $A$ which represents metagenes shown in Figure \@ref(fig:fastICAex). This way, we can visualize samples in a 2D plot. If we wanted to plot the relationship between genes we would use the columns of matrix $S$.
+```{r fastICAex, out.width='50%',fig.width=5,fig.cap="Leukemia gene expression values per patient on reduced dimensions by ICA."}
+library(fastICA)
+ica.res=fastICA(t(mat),n.comp=2) # apply ICA
+# plot reduced dimensions
+plot(ica.res$S[,1],ica.res$S[,2],col=as.factor(annotation_col$LeukemiaType))
+```
+
+
+#### Non-negative matrix factorization (NMF)
+Non-negative matrix factorization 
+\index{non-negative matrix factorization (NMF)}algorithms are series of algorithms that aim to decompose the matrix $X$ into the product of matrices $W$ and $H$, $X=WH$ (Figure \@ref(fig:NMFcartoon)) [@lee2001algorithms]. The constraint is that $W$ and $H$ must contain non-negative values, so must $X$. This is well suited for data sets that cannot contain negative values such as gene expression. This also implies additivity of components or latent factors. This is in line with the idea that expression pattern of a gene across samples is the weighted sum of multiple metagenes. Unlike ICA and SVD/PCA, the metagenes can never be combined in a subtractive way. In this sense, expression programs potentially captured by metagenes are combined additively.
+
+
+```{r NMFcartoon,echo=FALSE,fig.cap="Non-negative matrix factorization summary",out.width='70%'}
+knitr::include_graphics("images/NMFcartoon.png")
+```
+
+The algorithms that compute NMF try to minimize the cost function $D(X,WH)$, which is the distance between $X$ and $WH$. The early algorithms just use the Euclidean distance, which translates to $\sum(X-WH)^2$; this is also known as the Frobenius norm and you will see in the literature it is written as :$\||X-WH||_{F}$.
+However, this is not the only distance metric; other distance metrics are also used in NMF algorithms. In addition, there could be other parameters to optimize that relates to sparseness of the $W$ and $H$ matrices. With sparse $W$ and $H$, each entry in the $X$ matrix is expressed as the sum of a small number of components. This makes the interpretation easier, if the weights are $0$ then there is no contribution from the corresponding factors.
+
+Below, we are plotting the values of metagenes (rows of $H$) for components 1 and 3, shown in Figure \@ref(fig:nmfCode). In this context, these values can also be interpreted as the relationship between samples. If we wanted to plot the relationship between genes we would plot the columns of the $W$ matrix.
+```{r nmfCode,out.width='60%',fig.width=5,fig.cap="Leukemia gene expression values per patient on reduced dimensions by NMF. Components 1 and 3 is used for the plot."}
+library(NMF)
+res=NMF::nmf(mat,rank=3,seed="nndsvd") # nmf with 3 components/factors
+w <- basis(res) # get W
+h <- coef(res)  # get H
+# plot 1st factor against 3rd factor
+plot(h[1,],h[3,],col=as.factor(annotation_col$LeukemiaType),pch=19)
+```
+
+We should add the note that, due to random starting points of the optimization algorithm, NMF is usually run multiple times and a consensus clustering approach is used when clustering samples. This simply means that samples are clustered together if they cluster together in multiple runs of the NMF. The NMF package we used above has built-in ways to achieve this. In addition, NMF is a family of algorithms. The choice of cost function to optimize the difference between $X$ and $WH$, and the methods used for optimization create multiple variants of NMF. The "method" parameter in the above `nmf()` function controls the algorithm choice for NMF. \index{R Packages!\texttt{NMF}}
+
+
+#### Choosing the number of components and ranking components in importance
+In both ICA and NMF, there is no well-defined way to rank components or to select the number of components. There are a couple of approaches that might suit both ICA and NMF for ranking components. One can use the norms of columns/rows in mixing matrices. This could simply mean take the sum of absolute values in mixing matrices. For our ICA example above, we would take the sum of the absolute values of the rows of $A$ since we transposed the input matrix $X$ before ICA. And for the NMF, we would use the columns of $W$. These ideas assume that the larger coefficients in the weight or mixing matrices indicate more important components.
+
+For selecting the optimal number of components, the NMF package provides different strategies. One way is to calculate the RSS for each $k$, the number of components, and take the $k$ where the RSS curve starts to stabilize. However, these strategies require that you run the algorithm with multiple possible component numbers. The `nmf` function will run these automatically when the `rank` argument is a vector of numbers. For ICA there is no straightforward way to choose the right number of components. A common strategy is to start with as many components as variables and try to rank them by their usefulness. 
+
+
+```{block2, nmfica, type='rmdtip'}
+__Want to know more ?__
+The NMF package vignette has extensive information on how to run NMF to get stable results and an estimate of components: https://cran.r-project.org/web/packages/NMF/vignettes/NMF-vignette.pdf
+```
+
+
+
+### Multi-dimensional scaling
+MDS is a set of data analysis techniques that displays the structure of distance data in a high-dimensional space into a lower dimensional space without much loss of information [@cox2000multidimensional]. The overall goal of MDS is to faithfully represent these distances with the lowest possible dimensions. The so-called "classical multi-dimensional scaling" algorithm, tries to minimize the following function:\index{Multi-dimensional scaling (MDS)}
+
+${\displaystyle Stress_{D}(z_{1},z_{2},...,z_{N})={\Biggl (}{\frac {\sum _{i,j}{\bigl (}d_{ij}-\|z_{i}-z_{j}\|{\bigr )}^{2}}{\sum _{i,j}d_{ij}^{2}}}{\Biggr )}^{1/2}}$
+
+Here the function compares the new data points on the lower dimension $(z_{1},z_{2},...,z_{N})$ to the input distances between data points or distance between samples in our gene expression example. It turns out, this problem can be efficiently solved with SVD/PCA on the scaled distance matrix, the projection on eigenvectors will be the most optimal solution for the equation above. Therefore, classical MDS is sometimes called Principal Coordinates Analysis in the literature. However, later variants improve on classical MDS by using this as a starting point and optimize a slightly different cost function that again measures how well the low-dimensional distances correspond to high-dimensional distances. This variant is called non-metric MDS and due to the nature of the cost function, it assumes a less stringent relationship between the low-dimensional distances $\|z_{i}-z_{j}\| and input distances $d_{ij}$. Formally, this procedure tries to optimize the following function.
+
+${\displaystyle Stress_{D}(z_{1},z_{2},...,z_{N})={\Biggl (}{\frac {\sum _{i,j}{\bigl (}\|z_{i}-z_{j}\|-\theta(d_{ij}){\bigr )}^{2}}{\sum _{i,j}\|z_{i}-z_{j}\|^{2}}}{\Biggr )}^{1/2}}$
+
+
+The core of a non-metric MDS algorithm is a two-fold optimization process. First the optimal monotonic transformation of the distances has to be found, which is shown in the above formula as $\theta(d_{ij})$. Secondly, the points on a low dimension configuration have to be optimally arranged, so that their distances match the scaled distances as closely as possible. These two steps are repeated until some convergence criteria is reached. This usually means that the cost function does not improve much after certain number of iterations. The basic steps in a non-metric MDS algorithm are:
+
+1) Find a random low-dimensional configuration of points, or in the variant we will be using below we start with the configuration returned by classical MDS.
+2) Calculate the distances between the points in the low dimension $\|z_{i}-z_{j}\|$, $z_{i}$ and $z_{j}$ are vector of positions for samples $i$ and $j$.
+3) Find the optimal monotonic transformation of the input distance, ${\textstyle \theta(d_{ij})}$, to approximate input distances to low-dimensional distances. This is achieved by isotonic regression, where a monotonically increasing free-form function is fit. This step practically ensures that ranking of low-dimensional distances are similar to rankings of input distances.
+4) Minimize the stress function by re-configuring low-dimensional space and keeping $\theta$ function constant.
+5) Repeat from Step 2 until convergence.
+
+We will now demonstrate both classical MDS and Kruskal's isometric MDS.
+```{r mds2,out.width='60%',fig.width=8.5,fig.cap="Leukemia gene expression values per patient on reduced dimensions by classical MDS and isometric MDS."}
+mds=cmdscale(dist(t(mat)))
+isomds=MASS::isoMDS(dist(t(mat)))
+# plot the patients in the 2D space
+par(mfrow=c(1,2))
+plot(mds,pch=19,col=as.factor(annotation_col$LeukemiaType),
+     main="classical MDS")
+plot(isomds$points,pch=19,col=as.factor(annotation_col$LeukemiaType),
+     main="isotonic MDS")
+```
+The resulting plot is shown in Figure \@ref(fig:mds2). In this example, there is not much difference between isotonic MDS and classical MDS. However, there might be cases where different MDS methods provide visible changes in the scatter plots.
+
+
+### t-Distributed Stochastic Neighbor Embedding (t-SNE) 
+t-SNE maps the distances in high-dimensional space to lower dimensions and it is similar to the MDS method in this respect. But the benefit of this particular method is that it tries to preserve the local structure of the data so the distances and grouping of the points we observe in lower dimensions such as a 2D scatter plot is as close as possible to the distances we observe in the high-dimensional space [@maaten2008visualizing]. As with other dimension reduction methods, you can choose how many lower dimensions you need. The main difference of t-SNE, as mentiones above, is that it tries to preserve the local structure of the data. This kind of local structure embedding is missing in the MDS algorithm, which also has a similar goal. MDS tries to optimize the distances as a whole, whereas t-SNE optimizes the distances with the local structure in mind. This is defined by the "perplexity" parameter in the arguments. This parameter controls how much the local structure influences the distance calculation. The lower the value, the more the local structure is taken into account. Similar to MDS, the process is an optimization algorithm. Here, we also try to minimize the divergence between observed distances and lower dimension distances. However, in the case of t-SNE, the observed distances and lower dimensional distances are transformed using a probabilistic framework with their local variance in mind.\index{t-Distributed Stochastic Neighbor Embedding (t-SNE)}
+
+From here on, we will provide a bit more detail on how the algorithm works in case the conceptual description above is too shallow. In t-SNE the Euclidean distances between data points are transformed into a conditional similarity between points. This is done by assuming a normal distribution on each data point with a variance calculated ultimately by the use of the "perplexity" parameter. The perplexity parameter is, in a sense, a guess about the number of the closest neighbors each point has. Setting it to higher values gives more weight to global structure. Given $d_{ij}$ is the Euclidean distance between point $i$ and $j$, the similarity score $p_{ij}$ is calculated as shown below.
+
+
+$$p_{j | i} = \frac{\exp(-\|d_{ij}\|^2 / 2 σ_i^2)}{∑_{k \neq i} \exp(-\|d_{ik}\|^2 / 2 σ_i^2)}$$
+
+This distance is symmetrized by incorporating $p_{i | j}$ as shown below. 
+
+$$p_{i j}=\frac{p_{j|i} + p_{i|j}}{2n}$$
+
+
+For the distances in the reduced dimension, we use t-distribution with one degree of freedom. In the formula below, $| y_i-y_j\|^2$ is Euclidean distance between points $i$ and $j$ in the reduced dimensions.
+
+$$
+q_{i j} = \frac{(1+ \| y_i-y_j\|^2)^{-1}}{(∑_{k \neq l} 1+ \| y_k-y_l\|^2)^{-1} }
+$$
+
+As most of the algorithms we have seen in this section, t-SNE is an optimization process in essence. In every iteration the points along lower dimensions are re-arranged to minimize the formulated difference between the observed joint probabilities ($p_{i j}$) and low-dimensional joint probabilities ($q_{i j}$). Here we are trying to compare probability distributions. In this case, this is done using a method called Kullback-Leibler divergence, or KL-divergence. In the formula below, since the $p_{i j}$ is pre-defined using original distances, the only way to optimize is to play with $q_{i j}$ because it depends on the configuration of points in the lower dimensional space. This configuration is optimized to minimize the KL-divergence between $p_{i j}$ and $q_{i j}$. 
+
+$$
+KL(P||Q) = \sum_{i, j} p_{ij} \, \log \frac{p_{ij}}{q_{ij}}.
+$$
+Strictly speaking, KL-divergence measures how well the distribution $P$ which is observed using the original data points can be approximated by distribution $Q$, which is modeled using points on the lower dimension. If the distributions are identical, KL-divergence would be $0$. Naturally, the more divergent the distributions are, the higher the KL-divergence will be.
+
+
+We will now show how to use t-SNE on our gene expression data set using the `Rtsne` package \index{R Packages!\texttt{Rtsne}}. We are setting the random seed because again, the t-SNE optimization algorithm has random starting points and this might create non-identical results in every run. After calculating the t-SNE lower dimension embeddings we plot the points in a 2D scatter plot, shown in Figure \@ref(fig:tsne).
+```{r tsne,eval=TRUE, out.width='60%',fig.width=5, fig.cap="t-SNE of leukemia expression dataset"}
+library("Rtsne")
+set.seed(42) # Set a seed if you want reproducible results
+tsne_out <- Rtsne(t(mat),perplexity = 10) # Run TSNE
+ #image(t(as.matrix(dist(tsne_out$Y))))
+# Show the objects in the 2D tsne representation
+plot(tsne_out$Y,col=as.factor(annotation_col$LeukemiaType),
+     pch=19)
+# create the legend for the Leukemia types
+legend("bottomleft",
+       legend=unique(annotation_col$LeukemiaType),
+       fill =palette("default"),
+       border=NA,box.col=NA)
+```
+As you might have noticed, we set again a random seed with the `set.seed()` function. The optimization algorithm starts with random configuration of points in the lower dimension space, and in each iteration it tries to improve on the previous lower dimension conflagration, which is why starting points can result in different final outcomes.
+
+
+```{block2, t-sne, type='rmdtip'}
+__Want to know more ?__
+- How perplexity affects t-sne, interactive examples:  https://distill.pub/2016/misread-tsne/
+- More on perplexity: https://blog.paperspace.com/dimension-reduction-with-t-sne/
+- Intro to t-SNE: https://www.oreilly.com/learning/an-illustrated-introduction-to-the-t-sne-algorithm
+```
+
+
+
+## Exercises 
+For this set of exercises we will be using the expression data shown below:
+```{r dataLoadClu,eval=FALSE}
+expFile=system.file("extdata",
+                    "leukemiaExpressionSubset.rds",
+                    package="compGenomRData")
+mat=readRDS(expFile)
+```
+
+### Clustering
+
+1. We want to observe the effect of data transformation in this exercise. Scale the expression matrix with the `scale()` function. In addition, try taking the logarithm of the data with the `log2()` function prior to scaling. Make box plots of the unscaled and scaled data sets using the `boxplot()` function. [Difficulty: **Beginner/Intermediate**]
+
+2. For the same problem above using the unscaled data and different data transformation strategies, use the `ward.d` distance in hierarchical clustering and plot multiple heatmaps. You can try to use the `pheatmap` library or any other library that can plot a heatmap with a dendrogram. Which data-scaling strategy provides more homogeneous clusters with respect to disease types? [Difficulty: **Beginner/Intermediate**]
+
+3. For the transformed and untransformed data sets used in the exercise above, use the silhouette for deciding number of clusters using hierarchical clustering. [Difficulty: **Intermediate/Advanced**]
+
+4. Now, use the Gap Statistic for deciding the number of clusters in hierarchical clustering. Is it the same number of clusters identified by two methods? Is it similar to the number of clusters obtained using the k-means algorithm in the chapter. [Difficulty: **Intermediate/Advanced**]
+
+### Dimension reduction
+We will be using the leukemia expression data set again. You can use it as shown in the clustering exercises.
+
+1. Do PCA on the expression matrix using the `princomp()` function and then use the `screeplot()` function to visualize the explained variation by eigenvectors. How many top components explain 95% of the variation? [Difficulty: **Beginner**]
+
+2. Our next tasks are to remove eigenvectors and reconstruct the matrix using SVD, then calculate the reconstruction error as the difference between original and reconstructed matrix. HINT: You have to use the `svd()` function and equalize eigenvalue to $0$ for the component you want to remove. [Difficulty: **Intermediate/Advanced**]
+
+3. Produce a 10-component ICA from the expression data set. Remove each component and measure the reconstruction error without that component. Rank the components by decreasing reconstruction-error. [Difficulty: **Advanced**]
+
+4. In this exercise we use the `Rtsne()` function on the leukemia expression data set. Try to increase and decrease perplexity t-sne, and describe the observed changes in 2D plots. [Difficulty: **Beginner**]
+
+# Multi-omics analysis
+
+## Use case: Multi-omics data from colorectal cancer
+
+The examples in this document will use the following data: a set of 121 tumors from the TCGA (Weinstein, Collisson, Mills, et al. 2013) colorectal cancer cohort. The tumors have been profiled for gene expression using RNA-seq, mutations using Exome-seq, and copy number variations using genotyping arrays. Projects such as TCGA have turbocharged efforts to sub-divide cancer into subtypes. Although two tumors arise in the colon, they may have distinct molecular profiles, which is important for treatment decisions. The subset of tumors used in this chapter belong to two distinct molecular subtypes defined by the Colorectal Cancer Subtyping Consortium (Guinney, Dienstmann, Wang, et al. 2015), CMS1 and CMS3. 
+
+The data we are going to use are in a package `compGenomRData` specifically created by the authors and can be installed via `devtools::install_github("compgenomr/compGenomRData")`. We use the `system.file()` function to get the path to the files. 
+The following code snippets load this multi-omics data from the companion package, starting with gene expression data from RNA-seq. Below we are reading the RNA-seq data from the `compGenomRData` package.
+
+```{r}
+if (!(require(compGenomRData))) {
+devtools::install_github("compgenomr/compGenomRData")
+}
+# read in the csv from the companion package as a data frame
+csvfile <- system.file("extdata", "multi-omics", "COREAD_CMS13_gex.csv", 
+                       package="compGenomRData")
+x1 <- read.csv(csvfile, row.names=1)
+# Fix the gene names in the data frame
+rownames(x1) <- sapply(strsplit(rownames(x1), "\\|"), function(x) x[1])
+# Output a table
+knitr::kable(head(t(head(x1))), caption="Example gene expression data (head)")
+```
+
+This table shows the head of the gene expression matrix. The rows correspond to patients, referred to by their TCGA identifier, as the first column of the table. Columns represent the genes, and the values are RPKM expression values. The column names are the names or symbols of the genes.
+
+We first **read mutation data** with the following code snippet.
+```{r}
+# read in the csv from the companion package as a data frame
+csvfile <- system.file("extdata", "multi-omics", "COREAD_CMS13_muts.csv",
+                       package="compGenomRData")
+x2 <- read.csv(csvfile, row.names=1)
+# Set mutation data to be binary (so if a gene has more than 1 mutation,
+# we only count one)
+x2[x2>0]=1
+# output a table
+knitr::kable(head(t(head(x2))), caption="Example mutation data (head)")
+```
+
+Table 2 shows the mutations of these tumors. In the mutation matrix, each cell is a binary 1/0, indicating whether or not a tumor has a non-synonymous mutation in the gene indicated by the column. These types of mutations change the aminoacid sequence, therefore they are likely to change the function of the protein.
+
+Next, we **read copy number data** with the following code snippet.
+```{r}
+# read in the csv from the companion package as a data frame
+csvfile <- system.file("extdata", "multi-omics", "COREAD_CMS13_cnv.csv", 
+                       package="compGenomRData")
+x3 <- read.csv(csvfile, row.names=1)
+# output a table
+knitr::kable(head(t(head(x3))), 
+             caption="Example copy number data for CRC samples")
+```
+
+Finally, table 3 shows GISTIC scores (Mermel, Schumacher, Hill, et al. 2011) for copy number alterations in these tumors. During transformation from healthy cells to cancer cells, the genome sometimes undergoes large-scale instability; large segments of the genome might be replicated or lost. This will be reflected in each segment’s "copy number". In this matrix, each column corresponds to a chromosome segment, and the value of the cell is a real-valued score indicating if this segment has been amplified (copied more) or lost, relative to a non-cancer control from the same patient.
+
+Each of the data types (gene expression, mutations, copy number variation) on its own, provides some signal which allows us to somewhat separate the samples into the two different subtypes. In order to explore these relations, we must first obtain the subtypes of these tumors. The following code snippet reads these, also from the companion package:
+```{r}
+# read in the csv from the companion package as a data frame
+csvfile <- system.file("extdata", "multi-omics", "COREAD_CMS13_subtypes.csv",
+                       package="compGenomRData")
+covariates <- read.csv(csvfile, row.names=1)
+# Fix the TCGA identifiers so they match up with the omics data
+rownames(covariates) <- gsub(pattern = '-', replacement = '\\.',
+                             rownames(covariates))
+covariates <- covariates[colnames(x1),]
+# create a dataframe which will be used to annotate later graphs
+anno_col <- data.frame(cms=as.factor(covariates$cms_label))
+rownames(anno_col) <- rownames(covariates)
+# output a table
+knitr::kable(head(anno_col), 
+             caption="Clinical information (covariates)")
+```
+
+Before proceeding with any multi-omics integration analysis which might obscure the underlying data, it is important to take a look at each omic data type on its own, and in this case in particular, to examine their relation to the underlying condition, i.e. the cancer subtype. A great way to get an eagle-eye view of such large data is using heatmaps.
+
+We will first check the gene expression data in relation to the subtypes. One way of doing that is plotting a heatmap and clustering the tumors, while displaying a color annotation atop the heatmap, indicating which subtype each tumor belongs to. This is shown in Figure 1, which is generated by the following code snippet:
+```{r}
+pheatmap::pheatmap(x1,
+                   annotation_col = anno_col,
+                   show_colnames = FALSE,
+                   show_rownames = FALSE,
+                   main="Gene expression data")
+```
+\begin{center}
+Figure 1. Heatmap of gene expression data for colorectal cancers.
+\end{center}
+
+In Figure 1, each column is a tumor, and each row is a gene. The values in the cells are FPKM values. There is another band above the heatmap annotating each column (tumor) with its corresponding subtype. The tumors are clustered using hierarchical clustering denoted by the dendrogram above the heatmap, according to which the columns (tumors) are ordered. While this ordering corresponds somewhat to the subtypes, it would not be possible to cut this dendrogram in a way which achieves perfect separation between the subtypes.
+
+Next we repeat the same exercise using the mutation data. The following snippet generates Figure 2:
+```{r}
+pheatmap::pheatmap(x2,
+                   annotation_col = anno_col,
+                   show_colnames = FALSE,
+                   show_rownames = FALSE,
+                   main="Mutation data")
+```
+\begin{center}
+Figure 2. Heatmap of mutation data for colorectal cancers.
+\end{center}
+An examination of Figure 2 shows that tumors clustered and ordered by mutation data correspond very closely to their CMS subtypes. However, one should be careful in drawing conclusions about this result. Upon closer examination, you might notice that the separating factor seems to be that CMS1 tumors have significantly more mutations than do CMS3 tumors. This, rather than mutations in a specific genes, seems to be driving this clustering result. Nevertheless, this hyper-mutated status is an important indicator for this subtype.
+
+Finally, we look into copy number variation data and try to see if clustered samples are in concordance with subtypes. The following code snippet generates Figure 3:
+```{r}
+pheatmap::pheatmap(x3,
+                   annotation_col = anno_col,
+                   show_colnames = FALSE,
+                   show_rownames = FALSE,
+                   main="Copy number data")
+```
+\begin{center}
+Figure 3. Heatmap of copy number variation data, colorectal cancers.
+\end{center}
+The interpretation of Figure 3 is left as an exercise for the reader.
+
+It is clear that while there is some "signal" in each of these omics types, as is evident from these heatmaps, it is equally clear that none of these omics types completely and on its own explains the subtypes. Each omics type provides but a glimpse into what makes each of these tumors different from a healthy cell. Through the rest of this chapter, we will demonstrate how analyzing the gene expression, mutations, and copy number variations, in tandem, we will be able to get a better picture of what separates these cancer subtypes.
+
+The next section will describe latent variable models for multi-omics integrations. Latent variable models are a form of dimensionality reduction. Each omics data type is "big data" in its own right; a typical RNA-seq experiment profiles upwards of 50 thousand different transcripts. The difficulties in handling large data matrices are only exacerbated by the introduction of more omics types into the analysis, as we are suggesting here. __In order to overcome these challenges, latent variable models are a powerful way to reduce the dimensionality of the data down to a manageable size__.
+
+## Latent variable models for multi-omics integration
+
+Unsupervised multi-omics integration methods are methods that look for patterns __within__ and __across__ data types, in a label-agnostic fashion, i.e. without knowledge of the identity or label of the analyzed samples (e.g. cell type, tumor/normal). This chapter focuses on _latent variable_ models, a form of dimensionality reduction technique. Latent variable models make an assumption that __the high-dimensional data we observe (e.g. counts of tens of thousands of mRNA molecules) arise from a lower dimension description__. The variables in that lower dimensional description are termed latent variables, as they are believed to be latent in the data, but not directly observable through experimentation. Therefore, there is a need for methods to infer the latent variables from the data. For instance, (see Chapter 8 for details of RNA-seq analysis) the relative abundance of different mRNA molecules in a cell is largely determined by the cell type. There are other experiments which may be used to discern the cell type of cells (e.g. looking at them under a microscope), but an RNA-seq experiment does not, directly, reveal whether the analyzed sample was taken from one organ or another. A latent variable model would set the cell type as a latent variable, and the observable abundance of mRNA molecules to be dependent on the value of the latent variable (e.g. if the latent variable is "Regulatory T-cell", we would expect to find high expression of CD4, FOXP3, and CD25).
+
+## Matrix factorization methods for unsupervised multi-omics data integration
+
+Matrix factorization techniques attempt to infer a set of latent variables from the data by finding factors of a data matrix. Principal Component Analysis is a form of matrix factorization which finds factors based on the covariance structure of the data. Generally, matrix factorization methods may be formulated as
+$$
+X = WH,
+$$
+where $X$ is the *data matrix*, $[M \times N]$ where $M$ 
+is the number of features (typically genes), and $N$ is the number of samples. $W$ is an $[M \times K]$ factors matrix, and $H$ is the $[K \times N]$ *latent variable coefficient matrix*. Tying this back to PCA, where $X=U\Sigma V^T$, we may formulate the factorization in the same terms by setting $W=U\Sigma$ and $H=V^T$. If $K=\text{rank}(X)$, this factorization is lossless, i.e. $X=WH$. However if we choose  
+$K<\text{rank}(X)$, the factorization is lossy, i.e. $X\approx WH$. In that case, matrix factorization methods normally opt to minimize the error
+$$
+\min\|X - WH\|
+$$
+
+As we normally seek a latent variable model with a considerably lower dimensionality than $X$, this is the more common case.
+
+The loss function we choose to minimize may be further subject to some constraints or regularization terms. In the current context of latent factor models, a regularization term might be added to the loss function, i.e. we might choose to minimize  
+$\min\|X-WH\|+ \lambda\|W\|^2$ (this is called $L_2$-regularization) instead of merely the reconstruction error. Adding such a term to our loss function here will push the $W$
+  matrix entries towards 0, in effect balancing between better reconstruction of the data and a more parsimonious model. A more parsimonious latent factor model is one with more sparsity in the latent factors. This sparsity is desirable for model interpretation, as will become evident in later sections.
+
+\begin{center}
+\includegraphics[width=0.7\textwidth]{matrix-factorization.png}
+\end{center}
+Figure 4. General matrix factorization framework. The data matrix on the left-hand side is decomposed into factors on the right-hand side. The equality may be an approximation as some matrix factorization methods are lossless (exact), while others are an approximation.
+
+In Figure 4, the $5\times 4$ data matrix $X$ is decomposed to a 2-dimensional latent variable model.
+
+### Multiple factor analysis
+
+Multiple factor analysis is a natural starting point for a discussion about matrix factorization methods for integrating multiple data types. It is a straightforward extension of PCA into the domain of multiple data types\footnote{When dealing with categorical variables, MFA uses MCA (Multiple Correspondence Analysis). This is less relevant to biological data analysis and will not be discussed here.}.
+
+Figure 5 sketches a naive extension of PCA to a multi-omics context.
+\begin{center}
+\includegraphics[width=0.7\textwidth]{mfa.png}
+\end{center}
+Figure 5. A naive extension of PCA to multi-omics; data matrices from different platforms are stacked, before applying PCA.
+
+Formally, we have
+$$
+X=\left[
+\begin{array}{c}
+X_1 \\
+X_2 \\
+\vdots \\
+X_L
+\end{array}
+\right]
+= WH
+$$
+a joint decomposition of the different data matrices $(X_i)$ into the factor matrix $W$ and the latent variable matrix $H$. This way, we can leverage the ability of PCA to find the highest variance decomposition of the data, when the data consists of different omics types. As a reminder, PCA finds the linear combinations of the features which, when the data is projected onto them, preserve the most variance of any  
+$K$-dimensional space. But because measurements from different experiments have different scales, they will also have variance (and co-variance) at different scales.
+
+Multiple Factor Analysis addresses this issue and achieves balance among the data types by normalizing each of the data types, before stacking them and passing them on to PCA. Formally, MFA is given by
+$$
+X_n=\left[
+\begin{array}{c}
+X_1/\lambda_1^{(1)} \\
+X_2/\lambda_1^{(2)} \\
+\vdots \\
+X_L/\lambda_1^{(L)}
+\end{array}
+\right]
+= WH
+$$
+where $\lambda_1^{(i)}$ is the first eigenvalue of the principal component decomposition of $X_i$.
+
+Following this normalization step, we apply PCA to $X_n$. From there on, MFA analysis is the same as PCA analysis.
+
+### MFA in R
+
+MFA is available through the CRAN package `FactoMineR`. The code snippet below shows how to run it:
+```{r}
+# run the MFA function from the FactoMineR package
+r.mfa <- FactoMineR::MFA(
+  t(rbind(x1,x2,x3)), # binding the omics types together
+  c(dim(x1)[1], dim(x2)[1], dim(x3)[1]), # specifying the dimensions of each
+  graph=FALSE)
+```
+
+Since this generates a two-dimensional factorization of the multi-omics data, we can now plot each tumor as a dot in a 2D scatter plot to see how well the MFA factors separate the cancer subtypes. The following code snippet generates Figure 6:
+```{r}
+# first, extract the H and W matrices from the MFA run result
+mfa.h <- r.mfa$global.pca$ind$coord
+mfa.w <- r.mfa$quanti.var$coord
+
+# create a dataframe with the H matrix and the CMS label
+mfa_df <- as.data.frame(mfa.h)
+mfa_df$subtype <- factor(covariates[rownames(mfa_df),]$cms_label)
+
+# create the plot
+ggplot2::ggplot(mfa_df, ggplot2::aes(x=Dim.1, y=Dim.2, color=subtype)) +
+ggplot2::geom_point() + ggplot2::ggtitle("Scatter plot of MFA")
+```
+
+Figure 6. Scatter plot of 2-dimensional MFA for multi-omics data shows separation between the subtypes.
+
+Figure 6 shows remarkable separation between the cancer subtypes; it is easy enough to draw a line separating the tumors to CMS subtypes with good accuracy.
+
+Another way to examine the MFA factors, which is also useful for factor models with more than two components, is a heatmap, as shown in Figure 7, generated by the following code snippet:
+```{r}
+pheatmap::pheatmap(t(mfa.h)[1:2,], annotation_col = anno_col,
+                  show_colnames = FALSE,
+                  main="MFA for multi-omics integration")
+```
+
+Figure 7. A heatmap of the two MFA components shows separation between the cancer subtypes.
+
+Figure 7 shows that indeed, when tumors are clustered and ordered using the two MFA factors we learned above, their separation into CMS clusters is nearly trivial.
+
+### Joint non-negative matrix factorization
+
+Non-negative Matrix Factorization (NMF) is an algorithm from 2000 that seeks to find a non-negative additive decomposition for a non-negative data matrix. It takes the familiar form $X\approx WH$, with  
+$X\ge 0$, $W\ge 0$, and $H\ge 0$. The non-negative constraints make a lossless decomposition (i.e. $X=WH$) generally impossible. Hence, NMF attempts to find a solution which minimizes the Frobenius norm of the reconstruction:
+$$
+\min\|X-WH\|_F \\
+W\ge 0,
+H\ge 0,
+$$
+where the Frobenius norm $\|\cdot\|_F$  is the matrix equivalent of the Euclidean distance:
+$$
+\|X\|_F=\sqrt{\sum_i\sum_j x_{ij}^2}
+$$
+
+This is typically solved for $W$ and $H$
+  using random initializations followed by iterations of a multiplicative update rule:
+$$
+W_{t+1}=W_t^T\frac{XH_t^T}{XH_tH_t^T}\\
+H_{t+1}=H_t\frac{W_t^TX}{W_t^TW_tX}
+$$
+Since this algorithm is guaranteed only to converge to a local minimum, it is typically run several times with random initializations, and the best result is kept.
+
+In the multi-omics context, we will, as in the MFA case, wish to find a decomposition for an integrated data matrix of the form
+$$
+X=\left[
+\begin{array}{c}
+X_1 \\
+X_2 \\
+\vdots \\
+X_L
+\end{array}
+\right]
+$$
+with $X_i$s denoting data from different omics platforms.
+
+As NMF seeks to minimize the reconstruction error $\|X-WH\|_F$, some care needs to be taken with regards to data normalization. Different omics platforms may produce data with different scales (i.e. real-valued gene expression quantification, binary mutation data, etc.), and so will have different baseline Frobenius norms. To address this, when doing Joint NMF, we first feature-normalize each data matrix, and then normalize by the Frobenius norm of the data matrix. Formally, we run NMF on
+$$
+X=\left[
+\begin{array}{c}
+X_1^N/\alpha_1 \\
+X_2^N/\alpha_2 \\
+\vdots \\
+X_L^N/\alpha_L
+\end{array}
+\right]
+$$
+where $X_i^N$ is the feature-normalized data matrix $X_i^N=\frac{x^{ij}}{\sum_j x^{ij}}$ and $\alpha_i=\|X_i^N\|_F$.
+
+Another consideration with NMF is the non-negativity constraint. Different omics data types may have negative values, for instance, copy-number variations (CNVs) may be positive, indicating gains, or negative, indicating losses, as in Table 4. In order to turn such data into a non-negative form, we will split each feature into two features, one new feature holding all the non-negative values of the original feature, and another feature holding the absolute value of the negative ones, as in Table 5.
+
+Table 4. Example copy number data. Data can be both positive (amplified regions) or negative (deleted regions).
+\begin{center}
+\begin{tabular}{lrr}
+\hline 
+      & \textbf{seg 1} & \textbf{seg 2} \\ \hline
+samp1 & 1              & 0              \\
+samp2 & 2              & 1              \\
+samp3 & 1              & -2   \\ \hline        
+\end{tabular}
+\end{center}
+
+Table 5. Example copy number data after splitting each column into a column representing copy number gains (+) and a column representing deletions (-). This data matrix is non-negative, and thus suitable for NMF algorithms.
+\begin{center}
+\begin{tabular}{lrrrr}
+\hline 
+      & \textbf{seg1+} & \textbf{seg1-} & \textbf{seg2+} & \textbf{seg2-} \\ \hline
+samp1 & 1   & 0 & 0 & 0              \\
+samp2 & 2   & 0 & 1 & 0              \\
+samp3 & 1   & 0 & 0 & 2   \\ \hline        
+\end{tabular}
+\end{center}
+
+### NMF in R
+
+Many NMF algorithms are available through the CRAN package `NMF`. The following code chunk demonstrates how it may be run:
+```{r warning=FALSE}
+# Feature-normalize the data
+x1.featnorm <- x1 / rowSums(x1)
+x2.featnorm <- x2 / rowSums(x2)
+x3.featnorm <- x3 / rowSums(x3)
+
+# Normalize by each omics type's frobenius norm
+matExpr<-x1.featnorm.frobnorm <- x1.featnorm / norm(as.matrix(x1.featnorm), type="F")
+matSNP<-x2.featnorm.frobnorm <- x2.featnorm / norm(as.matrix(x2.featnorm), type="F")
+matCNV<-x3.featnorm.frobnorm <- x3.featnorm / norm(as.matrix(x3.featnorm), type="F")
+
+# Split the features of the CNV matrix into two non-negative features each
+split_neg_columns <- function(df) {
+  n <- dim(df)[1]
+  k <- dim(df)[2]
+  df2 <- matrix(rep(0, n*2*k), ncol=2*k)
+  for (i in 1:k){
+    df2[,2*i-1] <- pmax(df[,i],0)
+    df2[,2*i]   <- pmax(-df[,i], 0)
+  }
+  as.data.frame(df2)
+}
+matCNVpos<- x3.featnorm.frobnorm.nonneg <- t(split_neg_columns(t(x3.featnorm.frobnorm)))
+colnames(matCNVpos) <- colnames(x3.featnorm.frobnorm.nonneg) <- colnames(x3.featnorm.frobnorm)
+
+# run the nmf function from the NMF package
+require(NMF)
+jointNames <-data.frame(exprNames = colnames(matExpr),
+                        snpNames = colnames(matSNP),
+                        cnvNames = colnames(matCNVpos)
+                        )
+jointMat <- rbind(matExpr, matSNP, matCNVpos)
+                     
+r.nmf <- nmf(t(jointMat),
+             2,
+             method='Frobenius')
+
+# exctract the H and W matrices from the nmf run result
+nmf.h <- NMF::basis(r.nmf)
+nmf.w <- NMF::coef(r.nmf)
+nmfw <- t(nmf.w)
+```
+
+As with MFA, we can examine how well 2-factor NMF splits tumors into subtypes by looking at the scatter plot in Figure 8, generated by the following code chunk:
+
+```{r}
+# create a dataframe with the H matrix and the CMS label (subtype)
+nmf_df <- as.data.frame(nmf.h)
+colnames(nmf_df) <- c("dim1", "dim2")
+nmf_df$subtype <- factor(covariates[rownames(nmf_df),]$cms_label)
+
+# create the scatter plot
+ggplot2::ggplot(nmf_df, ggplot2::aes(x=dim1, y=dim2, color=subtype)) +
+ggplot2::geom_point() +
+ggplot2::ggtitle("Scatter plot of 2-component NMF for multi-omics integration")
+```
+
+Figure 8. NMF creates a disentangled representation of the data using two components which allow for separation between tumor sub-types CMS1 and CMS3 based on NMF factors learned from multi-omics data.
+
+Figure 8 shows an important difference between NMF and MFA (PCA). It shows the tendency of samples to lie close to the X or Y axes, that is, the tendency of each sample to be high in only one of the factors. This will be discussed more in the later section on disentangledness.
+
+Again, should we choose to run NMF with more than two factors, a more useful plot might be the heatmap shown in Figure 9, generated by the following code snippet:
+```{r}
+pheatmap::pheatmap(t(nmf_df[,1:2]),
+                   annotation_col = anno_col,
+                   show_colnames=FALSE,
+                   main="Heatmap of 2-component NMF")
+```
+
+Figure 9. A heatmap of NMF factors shows separability of tumors into subtype clusters. This plot is more useful than a scatter plot when there are more than two factors.
+
+
+\index{iCluster}iCluster takes a Bayesian approach to the latent variable model. In Bayesian statistics, we infer distributions over model parameters, rather than finding a single maximum-likelihood parameter estimate. In iCluster, we model the data as 
+
+$$
+X_{(i)} = W_{(i)}Z + \epsilon_i,
+$$
+
+where $X_{(i)}$ is a data matrix from a single omics platform, $W_{(i)}$ are model parameters, $Z$ is a latent variable matrix, and is shared among the different omics platforms, and $\epsilon_i$ is a "noise" random variable, $\epsilon \sim N(0,\Psi)$, with $\Psi = diag(\psi_1,\dots \psi_M)$ is a diagonal covariance matrix.
+
+```{r,moiCluster,fig.cap="Sketch of iCluster model. Each omics datatype is decomposed to a coefficient matrix and a shared latent variable matrix, plus noise.",fig.align = 'center',out.width='75%',echo=FALSE}
+knitr::include_graphics("images/icluster.png" )
+```
+
+
+
+Note that with this construction, the omics measurements $X$ are expected to be the same for samples with the same latent variable representation, up to Gaussian noise. Further, we assume a Gaussian prior distribution on the latent variables $Z \sim N(0,I)$, which means we assume $X_{(i)} \sim N \big( 0,W_{(i)} W_{(i)}^T + \Psi_{(i)} \big)$. In order to find suitable values for $W$, $Z$, and $\Psi$, we can write down the multivariate normal log-likelihood function and optimize it. For a multivariate normal distribution with mean $0$ and covariance $\Sigma$, the log-likelihood function is given by
+
+$$
+\ell = -\frac{1}{2} \bigg( \ln (|\Sigma|) + X^T \Sigma^{-1} X + k\ln (2 \pi) \bigg)
+$$
+
+(this is simply the log of the Probability Density Function of a multivariate Gaussian). For the multi-omics iCluster case, we have $X=\big( X_{(1)}, \dots, X_{(L)} \big)^T$, $W = \big( W_{(1)}, \dots, W_{(L)} \big)^T$, where $X$ is a multivariate normal with $0$-mean and $\Sigma = W W^T + \Psi$ covariance. Hence, the log-likelihood function for the iCluster model is given by:
+
+$$
+\ell_{iC}(W,\Sigma) = -\frac{1}{2} \bigg( \sum_{i=1}^L \ln (|\Sigma|) + X^T\Sigma^{-1}X + p_i \ln (2 \pi) \bigg)
+$$
+
+where $p_i$ is the number of features in omics data type $i$. Because this model has more parameters than we typically have samples, we need to push the model to use fewer parameters than it has at its disposal, by using regularization. iCluster uses Lasso regularization, which is a direct penalty on the absolute value of the parameters. I.e., instead of optimizing $\ell_{iC}(W,\Sigma)$, we will optimize the regularized log-likelihood:\index{loss function}
+
+$$
+\ell = \ell_{iC}(W,\Sigma) - \lambda\|W\|_1.
+$$
+
+The parameter $\lambda$ acts as a dial to weigh the trade-off between better model fits (higher log-likelihood) and a sparser model, with more $w_{ij}$s set to $0$, which gives models which generalize better and are more interpretable.
+
+In order to solve this problem, iCluster employs the Expectation Maximization (EM) algorithm. The full details are beyond the scope of this textbook. We will introduce a short sketch instead. The intuition behind the EM algorithm is a more general case of the k-means clustering algorithm (Chapter 4). The basic **EM algorithm** is as follows. 
+
+* Initialize $W$ and $\Psi$.
+* **Until convergence of $W$, $\Psi$**
+    - E-step: Calculate the expected value of $Z$ given the current estimates of $W$ and $\Psi$ and the data $X$.
+    - M-step: Calculate maximum likelihood estimates for the parameters $W$ and $\Psi$ based on the current estimate of $Z$ and the data $X$.
+
+#### iCluster+: Extending iCluster
+
+iCluster+ is an extension of the iCluster framework, which allows for omics types to arise from distributions other than a Gaussian. While normal distributions are a good assumption for log-transformed, centered gene expression data, it is a poor model for binary mutations data, or for copy number variation data, which can typically take the values $(-2, 1, 0, 1, 2)$ for heterozygous / monozygous deletions or amplifications. iCluster+ allows the different $X$s to have different distributions:
+
+* for binary mutations, $X$ is drawn from a multivariate binomial
+* for normal, continuous data, $X$ is drawn from a multivariate Gaussian
+* for copy number variations, $X$ is drawn from a multinomial
+* for count data, $X$ is drawn from a Poisson.
+
+In that way, iCluster+ allows us to explicitly model our assumptions about the distributions of our different omics data types, and leverage the strengths of Bayesian inference.
+
+Both iCluster and iCluster+ make use of sophisticated Bayesian inference algorithms (EM for iCluster, Metropolis-Hastings MCMC for iCluster+), which means they do not scale up trivially. Therefore, it is recommended to filter down the features to a manageable size before inputting data to the algorithm. The exact size of "manageable" data depends on your hardware, but a rule of thumb is that dimensions in the thousands are ok, but in the tens of thousands might be too slow.
+
+#### Running iCluster+
+
+iCluster+ is available through the Bioconductor package `iClusterPlus`. 
+
+```{r}
+if(!require(iClusterPlus)) BiocManager::install("iClusterPlus")
+```
+
+
+The following code snippet demonstrates how it can be run with two components:
+```{r,momultiOmicsiclusterplus}
+# run the iClusterPlus function
+r.icluster <- iClusterPlus::iClusterPlus(
+  t(x1), # Providing each omics type
+  t(x2),
+  t(x3),
+  type=c("gaussian", "binomial", "multinomial"), # Providing the distributions
+  K=2, # provide the number of factors to learn
+  alpha=c(1,1,1), # as well as other model parameters
+  lambda=c(.03,.03,.03))
+# extract the H and W matrices from the run result
+# here, we refer to H as z, to keep with iCluster terminology
+icluster.z <- r.icluster$meanZ
+rownames(icluster.z) <- rownames(covariates) # fix the row names
+icluster.ws <- r.icluster$beta
+# construct a dataframe with the H matrix (z) and the cancer subtypes
+# for later plotting
+icp_df <- as.data.frame(icluster.z)
+colnames(icp_df) <- c("dim1", "dim2")
+rownames(icp_df) <- colnames(x1)
+icp_df$subtype <- factor(covariates[rownames(icp_df),]$cms_label)
+```
+
+As with other methods, we examine the iCluster results by looking at the scatter plot in Figure \@ref(fig:moiclusterplusscatter) and the heatmap in Figure \@ref(fig:moiclusterplusheatmap). Both figures show that iCluster learns two factors which nearly perfectly discriminate between tumors of the two subtypes.
+
+```{r,moiclusterplusscatter,fig.cap="iCluster+ learns factors which allow tumor sub-types CMS1 and CMS3 to be discriminated.", echo=FALSE}
+ggplot2::ggplot(icp_df, ggplot2::aes(x=dim1, y=dim2, color=subtype)) +
+ggplot2::geom_point() +
+ggplot2::ggtitle("Scatter plot of iCluster+ factors")
+```
+
+```{r,moiclusterplusheatmap,fig.cap="iCluster+ factors, shown in a heatmap, separate tumors into their subtypes well.", echo=FALSE,fig.height=3}
+pheatmap::pheatmap(t(icp_df[,1:2]),
+                   annotation_col = anno_col, 
+                   show_colnames = FALSE,border_color = NA,
+                   main="Heatmap of iCluster+ factors")
+```
+
+
+```{block2,knowMoreicluster,type='rmdtip'}
+__Want to know more ?__
+- Read the original iCluster paper: Shen R., Olshen A. B., Ladanyi M. (2009). Integrative clustering of multiple genomic data types using a joint latent variable model with application to breast and lung cancer subtype analysis. _Bioinformatics_ 25, 2906–2912. 10.1093/bioinformatics/btp543 https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2800366/
+- Read the original iClusterPlus paper: an extension of iCluster: Shen R., Mo Q., Schultz N., Seshan V. E., Olshen A. B., Huse J., et al. (2012). Integrative subtype discovery in glioblastoma using iCluster. _PLoS ONE_ 7:e35236. 10.1371/journal.pone.0035236 https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3335101/
+- Learn more about the LASSO for model regularization: Tibshirani, R. (1996). Regression shrinkage and selection via the lasso. _J. Royal. Statist. Soc B._, Vol. 58, No. 1, pages 267-288: http://www-stat.stanford.edu/%7Etibs/lasso/lasso.pdf
+- Learn more about the EM algorithm: Dempster, A. P., et al. Maximum likelihood from incomplete data via the EM algorithm. _Journal of the Royal Statistical Society. Series B (Methodological)_, vol. 39, no. 1, 1977, pp. 1–38. JSTOR, JSTOR: http://www.jstor.org/stable/2984875
+- Read about MCMC algorithms: Hastings, W.K. (1970). Monte Carlo sampling methods using Markov chains and their applications. _Biometrika._ 57 (1): 97–109. doi:10.1093/biomet/57.1.97: https://www.jstor.org/stable/2334940
+```
+
+
+
+## Clustering using latent factors
+
+A common analysis in biological investigations is clustering. This is often interesting in cancer studies as one hopes to find groups of tumors (clusters) which behave similarly, i.e. have similar risks and/or respond to the same drugs. PCA is a common step in clustering analyses, and so it is easy to see how the latent variable models above may all be a useful pre-processing step before clustering. In the examples below, we will use the latent variables inferred by the algorithms in the previous section on the set of colorectal cancer tumors from the TCGA.
+
+### One-hot clustering
+
+A specific clustering method for NMF data is to assume each sample is driven by one component, i.e. that the number of clusters $K$ is the same as the number of latent variables in the model and that each sample may be associated to one of those components. We assign each sample a cluster label based on the latent variable which affects it the most. Figure 9 above (heatmap of 2-component NMF) shows the latent variable values for the two latent variables, for the 72 tumors, obtained by Joint NMF.
+
+The two rows are the two latent variables, and the columns are the 72 tumors. We can observe that most tumors are indeed driven mainly by one of the factors, and not a combination of the two. We can use this to assign each tumor a cluster label based on its dominant factor, shown in the following code snippet, which also produces the heatmap in Figure 13.
+```{r}
+# one-hot clustering in one line of code:
+# assign each sample the cluster according to its dominant NMF factor
+# easily accessible using the max.col function
+nmf.clusters <- max.col(nmf.h)
+names(nmf.clusters) <- rownames(nmf.h)
+
+# create an annotation data frame indicating the NMF one-hot clusters
+# as well as the cancer subtypes, for the heatmap plot below
+anno_nmf_cl <- data.frame(
+  nmf.cluster=factor(nmf.clusters),
+  cms.subtype=factor(covariates[rownames(nmf.h),]$cms_label)
+)
+
+# generate the plot
+pheatmap::pheatmap(t(nmf.h[order(nmf.clusters),]),
+  cluster_cols=FALSE, cluster_rows=FALSE,
+  annotation_col = anno_nmf_cl,
+  show_colnames = FALSE,border_color=NA,
+  main="Joint NMF factors\nwith clusters and molecular subtypes")
+```
+
+Figure 13. Joint NMF factors with clusters, and molecular sub-types. One-hot clustering assigns one cluster per dimension, where each sample is assigned a cluster based on its dominant component. The clusters largely recapitulate the CMS sub-types.
+
+We see that using one-hot clustering with Joint NMF, we were able to find two clusters in the data which correspond fairly well with the molecular subtype of the tumors.
+
+The one-hot clustering method does not lend itself very well to the other methods discussed above, i.e. iCluster and MFA. The latent variables produced by those other methods may be negative, and further, in the case of iCluster, are going to assume a multivariate Gaussian shape. As such, it is not trivial to pick one “dominant factor” for them. For NMF variants, this is a very common way to assign clusters.
+
+### K-means clustering
+
+Briefly, k-means is a special case of the EM algorithm, and indeed iCluster was originally conceived as an extension of K-means from binary cluster assignments to real-valued latent variables. The iCluster algorithm, as it is so named, calls for application of K-means clustering on its latent variables, after the inference step. The following code snippet shows how to pull K-means clusters out of the iCluster results, and produces the heatmap in Figure 14, which shows how well these clusters correspond to cancer subtypes.
+```{r}
+# use the kmeans function to cluster the iCluster H matrix (here, z)
+# using 2 as the number of clusters.
+icluster.clusters <- kmeans(icluster.z, 2)$cluster
+names(icluster.clusters) <- rownames(icluster.z)
+
+# create an annotation dataframe for the heatmap plot
+# containing the kmeans cluster assignments and the cancer subtypes
+anno_icluster_cl <- data.frame(
+  iCluster=factor(icluster.clusters),
+  cms.subtype=factor(covariates$cms_label))
+
+# generate the figure
+pheatmap::pheatmap(
+  t(icluster.z[order(icluster.clusters),]), # order z by the kmeans clusters
+  cluster_cols=FALSE, # use cluster_cols and cluster_rows=FALSE
+  cluster_rows=FALSE, # as we want the ordering by k-means clusters to hold
+  show_colnames = FALSE,border_color=NA,
+  annotation_col = anno_icluster_cl,
+  main="iCluster factors\nwith clusters and molecular subtypes")
+```
+
+Figure 14. K-means clustering on iCluster+ factors largely recapitulates the CMS sub-types.
+
+This demonstrates the ability of iClusterPlus to find clusters which correspond to molecular subtypes, based on multi-omics data.
+
+
+## Biological interpretation of latent factors
+
+### Inspection of feature weights in loading vectors
+
+The most straightforward way to go about interpreting the latent factors in a biological context, is to look at the coefficients which are associated with them. The latent variable models introduced above all take the linear form $X \approx WH$, where $W$ is a factor matrix, with coefficients tying each latent variable with each of the features in the $L$ original multi-omics data matrices. By inspecting these coefficients, we can get a sense of which multi-omics features are co-regulated. The code snippet below generates Figure \@ref(fig:moNMFHeatmap), which shows the coefficients of the Joint NMF analysis above:
+
+```{r,moNMFHeatmap,fig.cap="Heatmap showing the association of input features from multi-omics data (gene expression, copy number variation, and mutations), with JNMF factors. Gene expression features dominate both factors, but copy numbers and mutations mostly affect only one factor each."}
+# create an annotation dataframe for the heatmap
+# for each feature, indicating its omics-type
+data_anno <- data.frame(
+  omics=c(rep('expression',dim(x1)[1]),
+          rep('mut',dim(x2)[1]),
+          rep('cnv',dim(x3.featnorm.frobnorm.nonneg)[1])))
+rownames(data_anno) <- c(rownames(x1),
+                         paste0("mut:", rownames(x2)),
+                         rownames(x3.featnorm.frobnorm.nonneg))
+rownames(nmfw) <- rownames(data_anno)
+# generate the heat map
+pheatmap::pheatmap(nmfw,
+                   cluster_cols = FALSE,
+                   annotation_row = data_anno,
+                   main="NMF coefficients",
+                   clustering_distance_rows = "manhattan",
+                   fontsize_row = 1)
+```
+
+Inspection of the factor coefficients in the heatmap above reveals that Joint NMF has found two nearly orthogonal non-negative factors. One is associated with high expression of the HOXC11, ZIC5, and XIRP1 genes, frequent mutations in the BRAF, PCDHGA6, and DNAH5 genes, as well as losses in the 18q12.2 and gains in 8p21.1 cytobands. The other factor is associated with high expression of the SOX1 gene, more frequent mutations in the APC, KRAS, and TP53 genes, and a weak association with some CNVs.
+
+#### Disentangled representations
+
+\index{disentangled representations}The property displayed above, where each feature is predominantly associated with only a single factor, is termed _disentangledness_, i.e. it leads to _disentangled_ latent variable representations, as changing one input feature only affects a single latent variable. This property is very desirable as it greatly simplifies the biological interpretation of modules. Here, we have two modules with a set of co-occurring molecular signatures which merit deeper investigation into the mechanisms by which these different omics features are related. For this reason, NMF is widely used in computational biology today.
+
+### Making sense of factors using enrichment analysis
+
+\index{enrichment analysis}In order to investigate the oncogenic processes that drive the differences between tumors, we may draw upon biological prior knowledge by looking for overlaps between genes that drive certain tumors, and genes involved in familiar biological processes.
+
+#### Enrichment analysis
+
+The recent decades of genomics have uncovered many of the ways in which genes cooperate to perform biological functions in concert. This work has resulted in rich annotations of genes, groups of genes, and the different functions they carry out. Examples of such annotations include the Gene Ontology Consortium's _GO terms_ [@go_first_paper, @go_latest_paper], the _Reactome pathways database_ [@reactome_latent_paper], and the _Kyoto Encyclopaedia of Genes and Genomes_ [@kegg_latest_paper]. These resources, as well as others, publish lists of so-called _gene sets_, or _pathways_, which are sets of genes which are known to operate together in some biological function, e.g. protein synthesis, DNA mismatch repair, cellular adhesion, and many other functions. Gene set enrichment analysis is a method which looks for overlaps between genes which we have found to be of interest, e.g. by them being implicated in a certain tumor type, and the a-priori gene sets discussed above.
+
+In the context of making sense of latent factors, the question we will be asking is whether the genes which drive the value of a latent factor (the genes with the highest factor coefficients) also belong to any interesting annotated gene sets, and whether the overlap is greater than we would expect by chance. If there are $N$ genes in total, $K$ of which belong to a gene set, the probability that $k$ out of the $n$ genes associated with a latent factor are also associated with a gene set is given by the hypergeometric distribution:
+
+$$
+P(k) = \frac{{\binom{K}{k}} - \binom{N-K}{n-k}}{\binom{N}{n}}.
+$$
+
+The **hypergeometric test** \index{statistical test} uses the hypergeometric distribution to assess the statistical significance of the presence of genes belonging to a gene set in the latent factor. The null hypothesis is that there is no relationship between genes in a gene set, and genes in a latent factor. When testing for over-representation of gene set genes in a latent factor, the P value from the hypergeometric test is the probability of getting $k$ or more genes from a gene set in a latent factor
+
+$$
+p = \sum_{i=k}^K P(k=i).
+$$
+
+The hypergeometric enrichment test is also referred to as _Fisher's one-sided exact test_. This way, we can determine if the genes associated with a factor significantly overlap (beyond chance) the genes involved in a biological process. Because we will typically be testing many gene sets, we will also need to apply multiple testing correction, such as Benjamini-Hochberg correction (see Chapter 3, multiple testing correction).
+
+#### Example in R
+
+In R, we can do this analysis using the `enrichR` package, which gives us access to many gene set libraries. In the example below, we will find the genes associated with preferentially NMF factor 1 or NMF factor 2, by the contribution of those genes' expression values to the factor. Then, we'll use `enrichR` to query the Gene Ontology terms which might be overlapping:
+
+```{r,moenrichr,message=FALSE,warning=FALSE,results='hide',error=FALSE}
+if(!require(enrichR)) BiocManager::install("enrichR")
+# select genes associated preferentially with each factor
+# by their relative loading in the W matrix
+genes.factor.1 <- names(which(nmfw[1:dim(x1)[1],1] > nmfw[1:dim(x1)[1],2]))
+genes.factor.2 <- names(which(nmfw[1:dim(x1)[1],1] < nmfw[1:dim(x1)[1],2]))
+# call the enrichr function to find gene sets enriched
+# in each latent factor in the GO Biological Processes 2018 library
+go.factor.1 <- enrichR::enrichr(genes.factor.1,
+                                databases = c("GO_Biological_Process_2018")
+                                )$GO_Biological_Process_2018
+go.factor.2 <- enrichR::enrichr(genes.factor.2,
+                                databases = c("GO_Biological_Process_2018")
+                                )$GO_Biological_Process_2018
+```
+
+The top GO terms associated with NMF factor 2 are shown in Table \@ref(tab:moNMFGOTerms):
+```{r,moNMFGOTerms,caption="Top GO-terms associated with NMF factor 2.",echo=FALSE,results='as.is'}
+library(kableExtra)
+go.factor.2$Genes <- gsub(";", "; ", go.factor.2$Genes)
+the.table <- knitr::kable(head(go.factor.2, 3)[,c("Term", "Adjusted.P.value", "Combined.Score")],
+                 caption="GO-terms associated with NMF factor 2",
+                 format="latex")
+#the.table <- kableExtra::column_spec(the.table, 1, width="10em")
+the.table <- kableExtra::kable_styling(the.table ,latex_options = c( "scale_down"))
+#the.table <- kableExtra::column_spec(the.table, 4, width="10em")
+the.table
+```
+
+
+
+### Interpretation using additional covariates
+
+Another way to ascribe biological significance to the latent variables is by correlating them with additional covariates we might have about the samples. In our example, the colorectal cancer tumors have also been characterized for microsatellite instability (MSI) status, using an external test (typically PCR-based). By examining the latent variable values as they relate to a tumor's MSI status, we might discover that we've learned latent factors that are related to it. The following code snippet demonstrates how this might be looked into, by generating Figures \@ref(fig:moNMFClinicalCovariates) and \@ref(fig:moNMFClinicalCovariates2):
+
+```{r,moNMFClinicalCovariates,fig.cap="Box plot showing MSI/MSS status distribution and NMF factor 1 values."}
+# create a data frame holding covariates (age, gender, MSI status)
+a <- data.frame(age=covariates$age,
+                gender=as.numeric(covariates$gender),
+                msi=covariates$msi)
+b <- nmf.h
+colnames(b) <- c('factor1', 'factor2')
+# concatenate the covariate dataframe with the H matrix
+cov_factor <- cbind(a,b)
+# generate the figure
+ggplot2::ggplot(cov_factor, ggplot2::aes(x=msi, y=factor1, group=msi)) +
+  ggplot2::geom_boxplot() +
+  ggplot2::ggtitle("NMF factor 1 microsatellite instability")
+```
+```{r,moNMFClinicalCovariates2,fig.cap="Box plot showing MSI/MSS status distribution and NMF factor 2 values."}
+ggplot2::ggplot(cov_factor, ggplot2::aes(x=msi, y=factor2, group=msi)) +
+  ggplot2::geom_boxplot() +
+  ggplot2::ggtitle("NMF factor 2 and microsatellite instability")
+```
+
+Figures \@ref(fig:moNMFClinicalCovariates) and \@ref(fig:moNMFClinicalCovariates2) show that NMF factor 1 and NMF factor 2 are separated by the MSI or MSS (microsatellite stability) status of the tumors.
+
+## Exercises
+
+### Matrix factorization methods
+
+1. Find features associated with iCluster and MFA factors, and visualize the feature weights. [Difficulty: **Beginner**]
+
+2. Normalizing the data matrices by their $\lambda_1$'s as in MFA supposes we wish to assign each data type the same importance in the down-stream analysis. This leads to a natural generalization whereby the different data types may be differently weighted. Provide an implementation of weighed-MFA where the different data types may be assigned individual weights. [Difficulty: **Intermediate**]
+
+3. In order to use NMF algorithms on data which can be negative, we need to split each feature into two new features, one positive and one negative. Implement the following function, and see that the included test does not fail: [Difficulty: **Intermediate/Advanced**]
+
+```{r,moNMFExerciseColumnSplitting, eval=FALSE, echo=TRUE}
+# Implement this function
+split_neg_columns <- function(x) {
+    # your code here
+}
+# a test that shows the function above works
+test_split_neg_columns <- function() {
+    input <- as.data.frame(cbind(c(1,2,1),c(0,1,-2)))
+    output <- as.data.frame(cbind(c(1,2,1), c(0,0,0), c(0,1,0), c(0,0,2)))
+    stopifnot(all(output == split_neg_columns(input)))
+}
+# run the test to verify your solution
+test_split_neg_columns()
+```
+
+4. The iCluster+ algorithm has some parameters which may be tuned for maximum performance. The `iClusterPlus` package has a method, `iClusterPlus::tune.iClusterPlus`, which does this automatically based on the Bayesian Information Criterion (BIC). Run this method on the data from the examples above and find the optimal lambda and alpha values. [Difficulty: **Beginner/Intermediate**]
+
+### Clustering using latent factors
+
+1. Why is one-hot clustering more suitable for NMF than iCluster? [Difficulty: **Intermediate**]
+
+2. Which clustering algorithm produces better results when combined with NMF, K-means, or one-hot clustering? Why do you think that is? [Difficulty: **Intermediate/Advanced**]
+
+### Biological interpretation of latent factors
+
+1. Another covariate in the metadata of these tumors is their _CpG island methylator Phenotype_ (CIMP). This is a phenotype carried by a group of colorectal cancers that display hypermethylation of promoter CpG island sites, resulting in the inactivation of some tumor suppressors. This is also assayed using an external test. Do any of the multi-omics methods surveyed find a latent variable that is associated with the tumor's CIMP phenotype? [Difficulty: **Beginner/Intermediate**]
+
+```{r,moNMFCIMP,echo=FALSE, eval=FALSE}
+a <- data.frame(age=covariates$age, gender=as.factor(covariates$gender), msi=covariates$msi, cimp=as.factor(covariates$cimp))
+b <- nmf.h
+colnames(b) <- c('factor1', 'factor2')
+cov_factor <- cbind(a,b)
+ggplot2::ggplot(cov_factor, ggplot2::aes(x=cimp, y=factor1, group=cimp)) + ggplot2::geom_boxplot() + ggplot2::ggtitle("NMF factor 1 and CIMP status")
+ggplot2::ggplot(cov_factor, ggplot2::aes(x=cimp, y=factor2, group=cimp)) + ggplot2::geom_boxplot() + ggplot2::ggtitle("NMF factor 2 and CIMP status")
+```
+
+2. Does MFA give a disentangled representation? Does `iCluster` give disentangled representations? Why do you think that is? [Difficulty: **Advanced**]
+
+3. Figures \@ref(fig:moNMFClinicalCovariates) and \@ref(fig:moNMFClinicalCovariates2) show that MSI/MSS tumors have different values for NMF factors 1 and 2. Which NMF factor is associated with microsatellite instability? [Difficulty: **Beginner**]
+
+4. Microsatellite instability (MSI) is associated with hyper-mutated tumors. As seen in Figure \@ref(fig:momutationsHeatmap), one of the subtypes has tumors with significantly more mutations than the other. Which subtype is that? Which NMF factor is associated with that subtype? And which NMF factor is associated with MSI? [Difficulty: **Advanced**]
+
+
+[^mfamca]: When dealing with categorical variables, MFA uses MCA (Multiple Correspondence Analysis). This is less relevant to biological data analysis and will not be discussed here.
+
+
+## References
+
+Guinney, Dienstmann, Wang, et al. 2015. "The consensus molecular subtypes of colorectal cancer." Nat. Med. 21 (11): 1350–6.
+
+Mermel, Schumacher, Hill, Meyerson, Beroukhim, and Getz. 2011. "GISTIC2. 0 Facilitates Sensitive and Confident Localization of the Targets of Focal Somatic Copy-Number Alteration in Human Cancers." Genome Biology 12 (4): R41.
+
+Weinstein, Collisson, Mills, et al. 2013. "The Cancer Genome Atlas Pan-Cancer analysis project." Nat. Genet. 45 (10): 1113–20.

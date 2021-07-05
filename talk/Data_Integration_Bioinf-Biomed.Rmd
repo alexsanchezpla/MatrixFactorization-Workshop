@@ -1,0 +1,138 @@
+---
+title: |
+       | _Data Integration in Bioinformatics and Biomedicine_
+       | Review and Open Problems 
+author: "Alex Sanchez-Pla (Esteban, Paco, Ferran B, Jordi)"
+
+institute: "Genetics, Microbiology and Statistics Department (UB) <br> Statistics and Bioinformatics  Unit (VHIR)"
+date: "`r Sys.Date()`"
+output:
+  xaringan::moon_reader:
+    css: [default, metropolis, metropolis-fonts]
+    lib_dir: libs
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+options(htmltools.dir.version = FALSE)
+```
+
+
+# Esquema
+
+.columnwide[
+  ### 1) [Data, Data-related Projects and Data Science](#Introduction)
+  ### 2) [Integrative Omics Data Analysis](#IODA)
+  ### 3) [Open problems we work in](#IODAProjects)
+  ### 4) [Biomedical data integration and data sharing](#DataSharing)
+  ### 5) [Data Projects we work in](#DataProjects)
+  ### 6) [Looking ahead](#Estrategia)
+]
+
+---
+
+class: inverse, middle, center
+
+name: Introduction
+
+# Data, Data-related Projects and Data Science <a id="Introduction"></a>
+
+---
+
+# The Data Science Projects Platform @VHIR
+
+
+.center[ 
+<img align = "center" src="images/organigramaUEB.png" width = "60%"> 
+ ] 
+
+
+---
+
+class: inverse, middle, center
+
+name: IODA
+
+# Integrative Omics Data Analysis
+
+
+---
+
+class: inverse, middle, center
+
+name: IODAProjects
+
+# Open problems we work in
+
+
+---
+
+class: inverse, middle, center
+
+name: DataSharing
+
+# Biomedical data integration and data sharing
+
+---
+
+class: inverse, middle, center
+
+name: DataProjects
+
+# Data Projects we work in
+
+---
+
+# Alguns projectes _externs_
+
+- Principals
+
+  - EOSC-Life 
+
+  - EU-PEARL 
+
+  - VEIS
+
+  - _IMPACT_
+
+- Altres
+
+  - EHDEN/OMOP al VH
+  
+  - EUHA/TEHDAS al VH
+
+  - DARWIN & EMA al VH/VHIR
+
+---
+
+# Alguns projectes Interns
+
+- Liderats per nosaltres
+
+  - Comissió Mixta VH/VHIR per a l'ús secundari de les dades
+
+  - Creació d'un catàleg de dades de COVID
+  
+  
+- Co-participats
+
+  - Implementació de DMPs per als projectes de recerca
+  
+  - Repositoris de dades i ciència oberta
+
+  - Implementació d'una plataforma per a l'anàlisi integrada de dades 
+
+---
+
+class: inverse, middle, center
+
+name: Estrategia
+
+# Looking ahead
+
+
