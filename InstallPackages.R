@@ -26,7 +26,7 @@ installifnot("Rtsne", BioC=FALSE)
 installifnot("matrixStats", BioC=FALSE)
 installifnot("FactoMineR", BioC=FALSE)
 
-installifnot("org.Hs.eg.db")
+installifnot("leukemiasEset")
 installifnot("SummarizedExperiment")
 installifnot("pheatmap")
 installifnot("iClusterPlus")

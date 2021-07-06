@@ -97,7 +97,22 @@ _Pendent_
 
 ## Use case. Studying leukemia using gene expression microarrays
 
-We start with a gene expression matrix obtained from XXXX. 
+We start with a subset (1000 genes) of gene expression matrix obtained from the package `leukemiasEset` . The data have been pre-processed with the code below that keeps the 1000 most variable genes.
+
+This dataset and other used in the workshop are available in package `compGenomData` 
+
+```{r eval=FALSE}
+# get data explaratory data analysis statisticsChp
+library(leukemiasEset)
+mat=exprs(leukemiasEset)
+mat=(limma::normalizeQuantiles(mat))
+mat2=mat[order(matrixStats::rowSds(mat)/rowMeans(mat)),][1:1000,]
+saveRDS(mat2,"leukemiaExpressionSubset.rds")
+saveRDS(mat,"leukemiaExpression.rds")
+mat=readRDS("leukemiaExpressionSubset.rds")
+
+```
+
 
 ```{r}
 library (compGenomRData)
