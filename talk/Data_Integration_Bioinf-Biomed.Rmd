@@ -151,12 +151,13 @@ has driven a multitude of __Research Projects__ <br>
 
 - Their first or ultimate objective is to _facilitate the path to personalized medicine_ through:
 .pull-left[
-    - data integration 
-    - data sharing, 
-    - data exchange (OMOP, HL7)
-    - data FAIRification,
-    - cloud computing and 
-    - (federated) data analysis,<br>
+
+  - data integration 
+  - data sharing, 
+  - data exchange (OMOP, HL7)
+  - data FAIRification,
+  - cloud computing and 
+  - (federated) data analysis,<br>
 among others.
   ]
   
@@ -254,15 +255,167 @@ _"Many key ideas of linear algebra, when you look at them closely, are really fa
 Gilbert Strang.
 
 ---
+# Omics technolgies and data matrices
+
+.center[ 
+<img align = "center" src="images/" width = "80%"> 
+]
+
+---
+
+# Matrix factorization helps find interpretation
+
+---
+
+# Distinct factorizations, distinct views
+
+---
+
+# Extension to multi-omics
+
+---
+
+# The missing blocks problem
+
+---
+
+# The workshop
+
+---
+
 
 class: inverse, middle, center
 
 name: IODAProjects
 
-# Open problems we work in
+# Integration problems we work with
+
+---
+# FOBI (Food-Biomarker Ontology)
+### Pol Castellano, Alex Sánchez
+
+ .font130[
+  - Heterogeneus nutritional data (<u>semantic problem</u>) -> **FoodOn**
+  ]    
+
+  .font130[
+  - Difficult association of nutritional data with other types of data (<u>semantic and quantitative problem</u>)  
+  ]
+
+  .font130[
+  - **Unclear relationships between foods and metabolites**     
+  ]
+  
+.center[<img src="pix/foods&metabolites.png" width = "80%">]
 
 
 ---
+# FOBI (Food-Biomarker Ontology)
+### Pol Castellano, Alex Sánchez
+
+  .font130[
+  - Create an ontology that clearly defines the many complex relationships between **diet derived metabolites** and **foods** in a consistent and homogeneous way
+  ]
+
+  .font130[
+  - Reuse previous existing terms to maintain a consistent and standardized nomenclature (OBOFoundry)
+    - FoodOn 
+    - ChEBI
+  ]
+
+.center2[<img src="http://www.obofoundry.org/images/foundrylogo.png" width="100">]    
+
+  .font130[
+  - Propose a consistent starting point for nutrimetabolomic studies 
+    - Design
+    - Validation
+  ]
+
+---
+
+# FOBI (Food-Biomarker Ontology)
+### Pol Castellano, Alex Sánchez
+
+<a href="https://github.com/pcastellanoescuder/FoodBiomarkerOntology"><i class="fab fa-github"></i>&nbsp; https://github.com/pcastellanoescuder/FoodBiomarkerOntology</a><br>
+
+.pull-left[
+
+## Metrics 
+
+  - 2 sub-ontologies
+  - 1197 terms
+  - 4 different properties
+  - 13 food top-level classes
+  - 11 biomarker top-level classes
+  - More than 4700 relationships
+  - Part of **OBOFoundry project** [http://purl.obolibrary.org/obo/fobi.owl](http://purl.obolibrary.org/obo/fobi.owl)
+  - FOBI IDs are indexed into the [HMDB](https://hmdb.ca) (Human Metabolome Database) and [FooDB](https://foodb.ca) (Food Database)
+]
+
+.pull-right[<img src="pix/200630_FOBI.png" width="700">]      
+
+---
+
+# Insights in Multi-Group Data Analysis
+### Carolina Millapan, Ferran R., Esteban V.
+
+<p>
+.pull-left[
+- Analysis of variables observed in a set of individuals that belong to dierent groups. 
+  - Monitoring metabolite levels in blood of patients in different healthy/disease
+conditions,
+- Measurements of heavy metals in soil samples from dierent ecological environments, 
+- Studies of gene expression for individuals with dierent experimental conditions
+]
+
+.pull-right[
+
+<img align = "center" src="images/multiGroup.png" width = "50%"> 
+
+]
+
+---
+
+# Insights in Multi-Group Data Analysis
+### Carolina Millapan, Ferran R., Esteban V.
+
+### Multigroup PCA
+
+- __Multigroup Principal Component Analysis__ 
+
+  - Aim:  _maximization of the interdistances between the points of the different groups_.
+
+- __Multi-Group Dimension reduction__
+
+  - Aim: find an orthogonal set of vectors such that each vector v tends to avoid that the projections of the observations of a given group do not overlap the centroids of the projections of the observations of each of the remaining
+groups.
+
+---
+
+# Data integration with biological Annottaions
+### Ferran Briansó, Alex Sánchez
+
+<img align = "center" src="images/integrationWithAnnotations1.png" width = "90%"> 
+
+
+---
+
+# Data integration with biological Annottaions
+### Ferran Briansó, Alex Sánchez
+
+<img align = "center" src="images/integrationWithAnnotations2.png" width = "90%"> 
+
+
+---
+
+# Data integration with biological Annottaions
+### Ferran Briansó, Alex Sánchez
+
+<img align = "center" src="images/integrationWithAnnotations3.png" width = "90%"> 
+
+
+---
+
 
 class: inverse, middle, center
 
@@ -378,61 +531,84 @@ facilitating the interoperability of the clinical information systems of the dif
 
 ---
 
+# IMPaCT Global View
+
+
+.center[ 
+<img align = "center" src="images/IMPACTStructure.png" width = "100%"> 
+]
+
+---
+
+# New Skills: 
+
+  - data sharing, 
+  - data exchange (OMOP, HL7)
+  - data FAIRification,
+  - cloud computing, 
+  - open science,
+  - reproducibility,
+  - (federated) data analysis,
+  - and, of course AI and ML
+
+---
+
 class: inverse, middle, center
 
 name: DataProjects
 
-# Data Projects we work in
+# Data Projects we work in @VHIR
 
 ---
 
 # The Data Science Projects Platform @VHIR
 
+- The increasing needs in Data related projects leads to new structures to manage this.
 
 .center[ 
-<img align = "center" src="images/organigramaUEB.png" width = "60%"> 
+<img align = "center" src="images/organigramaUEB.png" width = "80%"> 
  ] 
 
 ---
 
-# Alguns projectes _externs_
+# External Data Projects: EOSC-Life
 
-- Principals
-
-  - EOSC-Life 
-
-  - EU-PEARL 
-
-  - VEIS
-
-  - _IMPACT_
-
-- Altres
-
-  - EHDEN/OMOP al VH
-  
-  - EUHA/TEHDAS al VH
-
-  - DARWIN & EMA al VH/VHIR
+.center[ 
+<img align = "center" src="images/EOSC-Life.png" width = "90%"> 
+ ] 
 
 ---
 
-# Alguns projectes Interns
+# External Data Projects: EU-PEARL
 
-- Liderats per nosaltres
+.center[ 
+<img align = "center" src="images/EU-PEARL.png" width = "90%"> 
+ ] 
 
-  - Comissió Mixta VH/VHIR per a l'ús secundari de les dades
+---
 
-  - Creació d'un catàleg de dades de COVID
-  
-  
-- Co-participats
+# External Data Projects: VEIS
 
-  - Implementació de DMPs per als projectes de recerca
-  
-  - Repositoris de dades i ciència oberta
+.center[ 
+<img align = "center" src="images/VEIS.png" width = "90%"> 
+ ] 
 
-  - Implementació d'una plataforma per a l'anàlisi integrada de dades 
+---
+
+# Other External Data Projects
+
+- The European Health Data Space (TEHDAS)
+
+- EHDEN (European HEalth Data and EVidence Network)
+
+- DARWIN (Data Analysis and Real World Interrogation Network)
+
+All these projects
+
+- Are huge (all over Europe).
+- Aim at some form of data re-use for health related research.
+- Require different types od (trans-national) data sharing.
+- With common or similar technical and legal issues to be addressed
 
 ---
 
@@ -441,5 +617,9 @@ class: inverse, middle, center
 name: Estrategia
 
 # Looking ahead
+
+---
+
+
 
 
