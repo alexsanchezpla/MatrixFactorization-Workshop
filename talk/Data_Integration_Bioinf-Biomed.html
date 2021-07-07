@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="" xml:lang="">
   <head>
-    <title>Data_Integration_Bioinf-Biomed.utf8</title>
+    <title>Data Integration in Bioinformatics and Biomedicine</title>
     <meta charset="utf-8" />
-    <meta name="author" content="Alex Sanchez-Pla (Esteban, Paco, Ferran B, Jordi)" />
-    <meta name="date" content="2021-07-04" />
+    <meta name="author" content="Alex Sanchez-Pla" />
+    <meta name="date" content="2021-07-06" />
     <script src="libs/header-attrs/header-attrs.js"></script>
     <link href="libs/remark-css/default.css" rel="stylesheet" />
     <link href="libs/remark-css/metropolis.css" rel="stylesheet" />
@@ -14,11 +14,10 @@
     <textarea id="source">
 class: center, middle, inverse, title-slide
 
-# <div class="line-block"><em>Data Integration in Bioinformatics and Biomedicine</em><br />
-Review and Open Problems</div>
-### Alex Sanchez-Pla (Esteban, Paco, Ferran B, Jordi)
+# Data Integration in Bioinformatics and Biomedicine
+### Alex Sanchez-Pla
 ### Genetics, Microbiology and Statistics Department (UB) <br> Statistics and Bioinformatics Unit (VHIR)
-### 2021-07-04
+### 2021-07-06
 
 ---
 
@@ -26,7 +25,7 @@ Review and Open Problems</div>
 
 
 
-# Esquema
+# Outline
 
 .columnwide[
   ### 1) [Data, Data-related Projects and Data Science](#Introduction)
@@ -43,16 +42,149 @@ class: inverse, middle, center
 
 name: Introduction
 
-# Data, Data-related Projects and Data Science &lt;a id="Introduction"&gt;&lt;/a&gt;
+# Data, Data-related Projects and &lt;br&gt; Data Science &lt;a id="Introduction"&gt;&lt;/a&gt;
 
 ---
 
-# The Data Science Projects Platform @VHIR
+# The importance of Data 
+
+## Data is essential to solve problems or answer questions
+
+- Simplistically, when we wish to solve a problem we collect data
+
+    - Statistics:     Questions --&gt; [Hypothesis] --&gt; Get data
+    - Data Science:   Questions --&gt; Get Data
+
+- Data availability and complexity increases all the time
+
+    - More (Big) data --&gt; Better solutions? 
+    
+- 21st century holy grial:
+
+    - __Data + AI --&gt; Personalized medicine__
+    
+&lt;!-- --- --&gt;
+
+&lt;!-- # How did we get here? --&gt;
+
+&lt;!-- - First we took traditional approach --&gt;
+
+&lt;!-- - Then we made the leap into microarrays --&gt;
+
+&lt;!-- - Next we moved into-multi-omics --&gt;
+
+&lt;!-- - Now we look forward to combining it with clinical data --&gt;
+
+---
+
+# From XXth century studies
+
+## Traditional Statistical Analysis
+
+.center[ 
+&lt;img align = "center" src="images/diseaseStudyClassic.png" width = "90%"&gt; 
+ ] 
+
+---
+
+# To beginning of XXth 
+
+## Microarrays: One dataset, _many_ genes
+
+### Efron called the XXIst century "_The century of microarrays_"
+
+.center[ 
+&lt;img align = "center" src="images/diseaseStudySingleOmics.png" width = "80%"&gt;
+ ] 
+
+---
+# Why integration?
+
+## The whole is more than the sum of parts
+
+.center[ 
+&lt;img align = "center" src="images/elephant.png" width = "90%"&gt; 
+ ]
+
+---
+
+# Why integration?
+
+## We May lose important information
+
+.center[ 
+&lt;img align = "center" src="images/mayMissSomething.jpg" width = "90%"&gt; 
+ ]
+
+---
+# Why integration?
+
+## Don't forget the Omics Cascade
+
+.center[ 
+&lt;img align = "center" src="images/omicsCascade.png" width = "90%"&gt; 
+ ]
+
+---
+# From single to multi-omics
+
+## Integromics entered the game (_We want it all_)
+
+.center[ 
+&lt;img align = "center" src="images/diseaseStudyMultiOmics.png" width = "90%"&gt; 
+ ]
+
+---
+
+# Can we get more data?
+
+## From MultiOmics to Personalized Medicine
 
 
 .center[ 
-&lt;img align = "center" src="images/organigramaUEB.png" width = "60%"&gt; 
- ] 
+&lt;img align = "center" src="images/fromMultiOmics2PM.jpg" width = "90%"&gt; 
+]
+
+Google "multi-omics for personalized medicine" images to see more ...
+
+---
+
+# Data-Centric Projects have become key
+
+- The need to have multimodal data, including omics data, images, and clinical data &lt;br&gt;
+has driven a multitude of __Research Projects__ &lt;br&gt;
+
+- Their first or ultimate objective is to _facilitate the path to personalized medicine_ through:
+    - data integration 
+    - data sharing, 
+    - cloud computing and 
+    - (federated) data analysis of shared data,&lt;br&gt;
+among others.
+    
+- This represents an _unprecedented opportunity_.
+
+&lt;p&gt;
+
+.center[ 
+&lt;img align = "center" src="images/DataProjects2.png" width = "60%"&gt; 
+]
+
+---
+
+# [_EN DESENVOLUPAMENT_]
+
+- Cal decidir si, a més d'aquesta intro volem afegir un parell de slides com
+
+    - La Plataforma de Projectes de Ciència de Dades dades
+    - Els nous reptes volen noves _necessitats _capacitats_ i aquí jo sí que parlaria de _Data Science_
+        - Els problemes del Data Sharing
+        - FAIR ificació de les dades
+        - Formats d'Intercanvi de Dades (OMOP)
+        - Ontologies
+        - Anàlisi Federada vs Anàlisi Centralitzada
+        - ML i IA per a tot això
+    
+    
 
 
 ---
@@ -88,6 +220,15 @@ class: inverse, middle, center
 name: DataProjects
 
 # Data Projects we work in
+
+---
+
+# The Data Science Projects Platform @VHIR
+
+
+.center[ 
+&lt;img align = "center" src="images/organigramaUEB.png" width = "60%"&gt; 
+ ] 
 
 ---
 

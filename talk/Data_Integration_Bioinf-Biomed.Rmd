@@ -1,9 +1,6 @@
 ---
-title: |
-       | _Data Integration in Bioinformatics and Biomedicine_
-       | Review and Open Problems 
-author: "Alex Sanchez-Pla (Esteban, Paco, Ferran B, Jordi)"
-
+title: "Data Integration in Bioinformatics and Biomedicine"
+author: "Alex Sanchez-Pla"
 institute: "Genetics, Microbiology and Statistics Department (UB) <br> Statistics and Bioinformatics  Unit (VHIR)"
 date: "`r Sys.Date()`"
 output:
@@ -23,7 +20,7 @@ options(htmltools.dir.version = FALSE)
 ```
 
 
-# Esquema
+# Outline
 
 .columnwide[
   ### 1) [Data, Data-related Projects and Data Science](#Introduction)
@@ -40,17 +37,148 @@ class: inverse, middle, center
 
 name: Introduction
 
-# Data, Data-related Projects and Data Science <a id="Introduction"></a>
+# Data, Data-related Projects and <br> Data Science <a id="Introduction"></a>
 
 ---
 
-# The Data Science Projects Platform @VHIR
+# The importance of Data 
+
+## Data is essential to solve problems or answer questions
+
+- Simplistically, when we wish to solve a problem we collect data
+
+    - Statistics:     Questions --> [Hypothesis] --> Get data
+    - Data Science:   Questions --> Get Data
+
+- Data availability and complexity increases all the time
+
+    - More (Big) data --> Better solutions? 
+    
+- 21st century holy grial:
+
+    - __Data + AI --> Personalized medicine__
+    
+<!-- --- -->
+
+<!-- # How did we get here? -->
+
+<!-- - First we took traditional approach -->
+
+<!-- - Then we made the leap into microarrays -->
+
+<!-- - Next we moved into-multi-omics -->
+
+<!-- - Now we look forward to combining it with clinical data -->
+
+---
+
+# From XXth century studies
+
+## Traditional Statistical Analysis
+
+.center[ 
+<img align = "center" src="images/diseaseStudyClassic.png" width = "90%"> 
+ ] 
+
+---
+
+# To beginning of XXth 
+
+## Microarrays: One dataset, _many_ genes
+
+### Efron called the XXIst century "_The century of microarrays_"
+
+.center[ 
+<img align = "center" src="images/diseaseStudySingleOmics.png" width = "80%">
+ ] 
+
+---
+# Why integration?
+
+## The whole is more than the sum of parts
+
+.center[ 
+<img align = "center" src="images/elephant.png" width = "90%"> 
+ ]
+
+---
+
+# Why integration?
+
+## We May lose important information
+
+.center[ 
+<img align = "center" src="images/mayMissSomething.jpg" width = "90%"> 
+ ]
+
+---
+# Why integration?
+
+## Don't forget the Omics Cascade
+
+.center[ 
+<img align = "center" src="images/omicsCascade.png" width = "90%"> 
+ ]
+
+---
+# From single to multi-omics
+
+## Integromics entered the game (_We want it all_)
+
+.center[ 
+<img align = "center" src="images/diseaseStudyMultiOmics.png" width = "90%"> 
+ ]
+
+---
+
+# Can we get more data?
+
+## From MultiOmics to Personalized Medicine
 
 
 .center[ 
-<img align = "center" src="images/organigramaUEB.png" width = "60%"> 
- ] 
+<img align = "center" src="images/fromMultiOmics2PM.jpg" width = "90%"> 
+]
 
+Google "multi-omics for personalized medicine" images to see more ...
+
+---
+
+# Data-Centric Projects have become key
+
+- The need to have multimodal data, including omics data, images, and clinical data <br>
+has driven a multitude of __Research Projects__ <br>
+
+- Their first or ultimate objective is to _facilitate the path to personalized medicine_ through:
+    - data integration 
+    - data sharing, 
+    - cloud computing and 
+    - (federated) data analysis of shared data,<br>
+among others.
+    
+- This represents an _unprecedented opportunity_.
+
+<p>
+
+.center[ 
+<img align = "center" src="images/DataProjects2.png" width = "60%"> 
+]
+
+---
+
+# [_EN DESENVOLUPAMENT_]
+
+- Cal decidir si, a més d'aquesta intro volem afegir un parell de slides com
+
+    - La Plataforma de Projectes de Ciència de Dades dades
+    - Els nous reptes volen noves _necessitats _capacitats_ i aquí jo sí que parlaria de _Data Science_
+        - Els problemes del Data Sharing
+        - FAIR ificació de les dades
+        - Formats d'Intercanvi de Dades (OMOP)
+        - Ontologies
+        - Anàlisi Federada vs Anàlisi Centralitzada
+        - ML i IA per a tot això
+    
 
 ---
 
@@ -60,6 +188,69 @@ name: IODA
 
 # Integrative Omics Data Analysis
 
+---
+
+# Integrative Omics Data Analysis
+
+- The idea that efficient integration of data from different OMICS can facilitate the discovery of true causes and states of disease has pervaded the biomedical community
+- The aims of integrative analysis is the _deciphering of complex biological relationships empowered by the combined use of distinct pieces of information that represent a, probably partial, view of the different levels at which these processes happen_.
+
+---
+
+# Methods of integrative analysis
+
+.center[ 
+<img align = "center" src="images/IODAmethods2020.png" width = "80%"> 
+
+Subramanian et alt., 2020. _Multi-omics Data Integration, Interpretation, and Its Application_
+]
+
+---
+
+# Many data repositories
+
+.center[ 
+<img align = "center" src="images/IODADataRepositories2020.png" width = "80%"> 
+
+Subramanian et alt., 2020. _Multi-omics Data Integration, Interpretation, and Its Application_
+]
+
+---
+
+# Many data visualization portals
+
+.center[ 
+<img align = "center" src="images/IODAVisualizationPortals.png" width = "80%"> 
+
+Subramanian et alt., 2020. _Multi-omics Data Integration, Interpretation, and Its Application_
+]
+
+---
+
+# So what?
+
+- We willl restrict to arbitrarily chosen situation:
+
+    - Multivariate statistical methods, classic and extensions 
+
+- for which we will sketch basic ideas,
+
+    - General concept
+    - Basic formulation
+    
+- and provide some examples of use.
+
+---
+
+# A general framework: Matrix factorization
+
+
+- As Strang says:
+
+_"Many key ideas of linear algebra, when you look at them closely, are really factorizations of a matrix.
+The original matrix becomes the product of 2 or 3 special matrices."_
+
+IMATGE DE LES FACTORITZACIONS PRINCIPALS (del llibre)
 
 ---
 
@@ -85,6 +276,15 @@ class: inverse, middle, center
 name: DataProjects
 
 # Data Projects we work in
+
+---
+
+# The Data Science Projects Platform @VHIR
+
+
+.center[ 
+<img align = "center" src="images/organigramaUEB.png" width = "60%"> 
+ ] 
 
 ---
 
