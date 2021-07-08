@@ -34,21 +34,18 @@ Sys.setlocale("LC_TIME", "C")
 
 ## Instructor Names
 
-- Alex Sánchez (asanchez@ub.edu)
-- Francesc Carmona (fcarmona@ub.edu), 
-- Pol Castellano (pcastellano@gmail,com)
+-   Alex Sánchez ([asanchez\@ub.edu](mailto:asanchez@ub.edu){.email})
+-   Francesc Carmona ([fcarmona\@ub.edu](mailto:fcarmona@ub.edu){.email}),
+-   Pol Castellano ([pcastellano\@gmail](mailto:pcastellano@gmail){.email},com)
 
 ## Workshop Description
 
-
 The workshop works through a pipeline that investigates the structure of a single or multiple omics dataset in order to determine the association between omics and phenotype characteristics such as disease type.
-
 
 ### Pre-requisites
 
-- Good knowledge of R and familiarity with dimension reduction techniques.
-- Familiarity with omics techniques and Bioconductor is a plus.
-
+-   Good knowledge of R and familiarity with dimension reduction techniques.
+-   Familiarity with omics techniques and Bioconductor is a plus.
 
 ### Workshop Participation
 
@@ -56,14 +53,14 @@ Execution of example code and hands-on practice
 
 ### R/Bioconductor packages needed
 
-The workshop requires a series of R and Bioconductor packages. 
+The workshop requires a series of R and Bioconductor packages.
 
-__Before you start__ run the script `InstallPackages.R` available in the project main folder.
-
+**Before you start** run the script `InstallPackages.R` available in the project main folder.
 
 ### Time outline
 
 ```{r}
+library(dbplyr)
 outline <- c("Workshop presentation and Overview", "10m",
 "Exploring single omics datasets", "20m",
 "Building a SummarizedExperiment from scratch",	"10m",
@@ -74,18 +71,36 @@ outline <- c("Workshop presentation and Overview", "10m",
 timeTable<- matrix(outline, ncol=2, byrow = TRUE)
 colnames(timeTable) <- c("Activity", "Time")
 
-kableExtra::kable(timeTable)
+kableExtra::kable(timeTable) %>% kableExtra::kable_styling()
 ```
 
 ## Workshop goals and objectives
 
-_Pendent_
-
 ### Learning goals
+
+-   The general goal is to become familiar on how to use matrix factorization techniques using R.
+-   A secondary optional goal is become familiar with some Bioconductor data structures such as `SummarizedExperiment` or `MultiAssayData` created to facilitate the management of single or multi-omics data.
 
 ### Learning objectives
 
+-   Learn to apply a variety of singl and multiple matrix factorization techniques
+-   Understand the difference between PCA, ICA and NMF through some examples
+-   Understand why we may need to ressort to multi-omics analysis and how to do using either MFA or joint matrix factorization
+-   Learn how to attempt a biological interpretation of single or multi-omics using enrichment analysis.
+-   Learn how to create and use objects of classes `SuimmarizedExperiment` and `MultiAssayData` to store and manipulate omics data.
+
 ## Resources and links
+
+## Source of the examples
+
+The examples used in the workshop have been extracted from two sources
+
+-   Chapters 4 and 11 of the excellent book [Computational Genomics with R](https://compgenomr.github.io/book/)
+-   The suplementary materials from the paper [Enter the Matrix: Factorization uncovers knowledge from omics](https://www.sciencedirect.com/science/article/pii/S0168952518301240)
+
+Both sources are freely available on the web.
+
+Although some of the code has been adapted for completeness and ease of use, credit has to be given to the authors of these materials.
 
 ### Bioc-2018
 
@@ -95,42 +110,104 @@ _Pendent_
 
 # Part I. Exploratory Analysis of Single Omics Datasets with Unsupervised methods
 
-## Use case. Studying leukemia using gene expression microarrays
+## Use case 1. Studying leukemia using gene expression microarrays
 
-We start with a subset (1000 genes) of gene expression matrix obtained from the package `leukemiasEset` . The data have been pre-processed with the code below that keeps the 1000 most variable genes.
+### Getting the data for the example
 
-This dataset and other used in the workshop are available in package `compGenomData` 
+We start with a subset (1000 genes) of gene expression matrix obtained from the package `leukemiasEset` .
+
+The data have been pre-processed with the code below that keeps the 1000 most variable genes.
+
+This dataset and other used in the workshop are available in package `compGenomDataR`.
+
+Given that this package is rather *heavy to download and install* we have extracted this dataset and the ones for the multi-omics example and have put them in the subdirectory "data". That is, data can be directly read from inside your rstudio project.
+
+Last it has to be noticed that, for this example we would not even need the data because the code below shows how to recreate the dataset.
 
 ```{r eval=FALSE}
-# get data explaratory data analysis statisticsChp
-library(leukemiasEset)
-mat=exprs(leukemiasEset)
-mat=(limma::normalizeQuantiles(mat))
-mat2=mat[order(matrixStats::rowSds(mat)/rowMeans(mat)),][1:1000,]
-saveRDS(mat2,"leukemiaExpressionSubset.rds")
-saveRDS(mat,"leukemiaExpression.rds")
-mat=readRDS("leukemiaExpressionSubset.rds")
-
+setwd("lab-Matrix_factorization")
+if (!exists("datasets/leukemiaExpressionSubset.rds")){
+  library(leukemiasEset)
+  data("leukemiasEset")
+  library(SummarizedExperiment)
+  leukemiaSummExp <-as(leukemiasEset, "SummarizedExperiment")
+  mat1=assay(leukemiaSummExp)
+  mat1=(limma::normalizeQuantiles(mat1))
+  mat2=mat1[order(matrixStats::rowSds(mat1)/rowMeans(mat1)),][1:1000,]
+  saveRDS(mat2,"datasets/leukemiaExpressionSubset.rds")
+  saveRDS(mat1,"datasets/leukemiaExpression.rds")
+}else{
+  mat=readRDS("datasets/leukemiaExpressionSubset.rds")
+}
 ```
 
+Alternatively if you suceeded to install the `CompGenomRData`package you can use:
 
-```{r}
-library (compGenomRData)
-library(pheatmap)
+```{r eval=FALSE}
 expFile=system.file("extdata","leukemiaExpressionSubset.rds",
                     package="compGenomRData")
 mat=readRDS(expFile)
-dim(mat)
-# canType<- substr(colnames(mat),1,3)
-# sampleNum <- substr(colnames(mat),11,13)
-# colnames(mat)<- paste(canType,sampleNum, sep="_")
-# table(canType)
-# head(mat)
-# # set the leukemia type annotation for each sample
+```
+
+
+#### Bonus: Working with container classes
+
+The code above has provided us with an instance of `ExpressionSet`which contains, not only the gene expression data, but also the information on covariates, about the experiment or about the type of microarrays used to generate the data.
+
+`ExpressionSet`class has been substituted by `SummarizedExperiment` so the object `LeukemiaEset` of class `ExpressionSet` has been converted into a new object `leukemiaSummExp` from class `SummarizedExperiment`.
+
+[This link](https://www.bioconductor.org/help/course-materials/2019/BSS2019/04_Practical_CoreApproachesInBioconductor.html) contains a nice tutorial on the topic.
+
+The image below has been taken from this tutorial:
+
+![SummarizedExperiment](images/summarizedExperiment.png)
+
+Accessing and using objects of class `SummarizedExperiment` becomes very intuitive after some use.
+
+```{r eval=FALSE}
+leukemiaSummExp
+dim(assay(leukemiaSummExp))
+metadata(leukemiaSummExp)
+colData(leukemiaSummExp)
+dim(colData(leukemiaSummExp))
+```
+
+One of its most interesting functionality is that subsetting is applied on all related "sub-objects" (slots).
+
+```{r eval=FALSE}
+leukemiaSub <-leukemiaSummExp[,1:10] 
+dim(assay(leukemiaSub))
+dim(colData(leukemiaSub))
+```
+
+### Exploring data in its original space
+
+The most common way to visualize omics data is using _heatmaps_. 
+
+These plots  show expression values using a colour scale for numeric values.
+
+They are usually set to group rows and/or columns based on their similarity. 
+Grouping is done by hierarchichal clustering.
+
+See [this section](https://compgenomr.github.io/book/clustering-grouping-samples-based-on-their-similarity.html) in CompGenomR book for details.
+
+
+```{r}
+library(pheatmap)
+expFile="datasets/leukemiaExpressionSubset.rds"
+mat=readRDS(expFile)
+
+# set the leukemia type annotation for each sample
 annotation_col = data.frame(
                     LeukemiaType =substr(colnames(mat),1,3))
 rownames(annotation_col)=colnames(mat)
+  
+pheatmap(mat,show_rownames=FALSE,show_colnames=FALSE,
+         annotation_col=annotation_col,
+         scale = "none",clustering_method="ward.D2",
+         clustering_distance_cols="euclidean")
 ```
+
 
 ## Visualizing complex datasets in reduced dimension
 
@@ -143,7 +220,6 @@ plot(mat[rownames(mat)=="ENSG00000100504",],
      ylab="CD33 (ENSG00000105383)",
      xlab="PYGL (ENSG00000100504)")
 ```
-
 
 ### Principal Components Analysis and SVD
 
@@ -198,7 +274,6 @@ PCA is done either by the eigen decomposition of the covariance matrix or the SV
 ## eigen(cov.mat) # obtain eigen decomposition for eigen values and vectors
 ```
 
-
 ```{r}
 ## ----SVDcartoon,echo=FALSE,fig.align='center',out.width='60%',fig.cap="Singular value decomposition (SVD) explained in a diagram. "----
 knitr::include_graphics("images/SVDcartoon.png")
@@ -220,8 +295,6 @@ plot(pr$x[,1],pr$x[,2],col=as.factor(annotation_col$LeukemiaType))
 
 ```
 
-
-
 ```{r out.width='70%',fig.cap= "Singular value decomposition (SVD) reorganized as multiplication of m-by-n weights matrix and eigenvectors"}
 knitr::include_graphics("images/SVDasWeights.png")
 ```
@@ -230,14 +303,11 @@ knitr::include_graphics("images/SVDasWeights.png")
 knitr::include_graphics("images/SVDlatentExample.png")
 ```
 
-
-
 ### Independent Components Analysis (ICA)
 
 ```{r, fig.cap="Independent Component Analysis (ICA)" }
 knitr::include_graphics("images/ICAcartoon.png")
 ```
-
 
 ```{r, out.width='50%',fig.width=5,fig.cap="Leukemia gene expression values per patient on reduced dimensions by ICA."}
 ## ----fastICAex, ----
@@ -312,9 +382,21 @@ legend("bottomleft",
 
 ```
 
+<!-- ## Use case II: Revealing distinct data characteristics using distinct factorizations. -->
 
+<!-- This example uses expression data, downloaded from the GTEx database  -->
 
-## Exercises
+<!-- - to illustrate how to explore the data using several factorization techniques and  -->
+
+<!-- - to show how distinct factorizations uncover distnct characteristics from the data. -->
+
+<!-- ```{r} -->
+
+<!-- library('fastICA') -->
+
+<!-- library('pca3d') -->
+
+<!-- ``` -->
 
 # Part II. Multi-Omics Analysis
 
@@ -407,7 +489,6 @@ pheatmap::pheatmap(x3,
                    main="Copy number data")
 
 ```
-
 
 ## Matrix factorization methods for unsupervised multiomics integration
 
@@ -520,7 +601,6 @@ pheatmap::pheatmap(t(nmf_df[,1:2]),
                    main="Heatmap of 2-component NMF")
 ```
 
-
 ### iCluster
 
 Sketch of iCluster model. Each omics datatype is decomposed to a coefficient matrix and a shared latent variable matrix, plus noise.
@@ -528,7 +608,6 @@ Sketch of iCluster model. Each omics datatype is decomposed to a coefficient mat
 ```{r}
 knitr::include_graphics("images/icluster.png" )
 ```
-
 
 ```{r}
 library(iClusterPlus)
@@ -609,8 +688,7 @@ pheatmap::pheatmap(t(nmf.h[order(nmf.clusters),]),
 
 ### K-Means
 
-use the kmeans function to cluster the iCluster H matrix (here, z)
-using 2 as the number of clusters.
+use the kmeans function to cluster the iCluster H matrix (here, z) using 2 as the number of clusters.
 
 ```{r}
 icluster.clusters <- kmeans(icluster.z, 2)$cluster
@@ -631,9 +709,6 @@ pheatmap::pheatmap(
   annotation_col = anno_icluster_cl,
   main="iCluster factors\nwith clusters and molecular subtypes")
 ```
-
-
-
 
 ## Biological interpretation of latent factors
 
@@ -660,7 +735,6 @@ pheatmap::pheatmap(nmfw,
                    clustering_distance_rows = "manhattan",
                    fontsize_row = 1)
 ```
-
 
 ### Making sense of factors using enrichment analysis
 
@@ -724,7 +798,3 @@ ggplot2::ggplot(cov_factor, ggplot2::aes(x=msi, y=factor2, group=msi)) +
   ggplot2::ggtitle("NMF factor 2 and microsatellite instability")
 
 ```
-
-
-
-## Exercises

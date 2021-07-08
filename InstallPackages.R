@@ -23,17 +23,24 @@ installifnot("dplyr", BioC=FALSE)
 installifnot("fastICA", BioC=FALSE)
 installifnot("Rtsne", BioC=FALSE)
 
+# installifnot("pca3d", BioC=FALSE)
+
 installifnot("matrixStats", BioC=FALSE)
 installifnot("FactoMineR", BioC=FALSE)
 
 installifnot("leukemiasEset")
+installifnot("Biobase")
+installifnot("limma")
 installifnot("SummarizedExperiment")
 installifnot("pheatmap")
 installifnot("iClusterPlus")
 
 installifnot("enrichR")
 
-devtools::install_github("compgenomr/compGenomRData")
-# If this does not work try to clone/download the repo into you computer
+# THE CODE BELOW IS NOT NEEDED ANYMORE
+# I have downloaded the data myself and put it in a "Data Directory"
+# devtools::install_github("compgenomr/compGenomRData")
+# If this does not work try to clone/download the repo into your computer
 # Once you have it in your disk install it using:
 # devtools::install_local("PATH_TO_compGenomRData")
+
