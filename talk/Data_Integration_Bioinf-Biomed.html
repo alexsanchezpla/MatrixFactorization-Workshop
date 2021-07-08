@@ -261,27 +261,151 @@ _"Many key ideas of linear algebra, when you look at them closely, are really fa
 Gilbert Strang.
 
 ---
-# Omics technolgies and data matrices
+# Omics technolgies yield data matrices
 
 .center[ 
-&lt;img align = "center" src="images/" width = "80%"&gt; 
+&lt;img align = "center" src="images/omicsMatrix.png" width = "100%"&gt; 
 ]
 
 ---
 
-# Matrix factorization helps find interpretation
+# Matrices can be factored
+
+-  Factorization helps discover the "true" biological dimension &lt;br&gt;
+-  by revealing hidden complex biological processes (CBPs)
+
+.center[ 
+&lt;img align = "center" src="images/omicsMatrixFactorization.png" width = "80%"&gt; 
+]
+
+---
+# The SVD
+
+## The mother of all factorizations
+
+.center[ 
+&lt;img align = "center" src="images/SVDcartoon.png" width = "90%"&gt; 
+]
+
+---
+# The SVD
+
+## SVD can be re-written as latent factors
+
+.center[ 
+&lt;img align = "center" src="images/SVDasWeights.png" width = "90%"&gt; 
+]
+
+---
+
+# Factorization helps interpretation
+
+.center[ 
+&lt;img align = "center" src="images/omicsMatrixFactorization2.png" width = "100%"&gt; 
+]
+
+---
+
+# Factorization helps interpretation
+
+.center[ 
+&lt;img align = "center" src="images/omicsMatrixFactorization3.png" width = "100%"&gt; 
+]
 
 ---
 
 # Distinct factorizations, distinct views
 
+.center[ 
+&lt;img align = "center" src="images/DistinctPatterns.png" width = "100%"&gt; 
+]
+
 ---
 
-# Extension to multi-omics
+# When a single omics is not enough
+
+- Ideally matrix factorizations can provide dimension-reduced
+data visualizations that help detect distinct patterns in
+features or samples.
+
+- Sometimes the information in the data does not allow for this
+separation, but _extending the factorization to different omics that can be related differently with the latent factors can do the job_.
+
+- As could be expected there exist many ways to do multiple factorization.
+
+  - Multiple Factor Analysis, 
+  - Regularized Generalized Canonical Correlation Analysis, 
+  - Multiple Coinertia Analysis, ...
 
 ---
 
-# The missing blocks problem
+# Multiple factor Analysis
+
+## Straightforward generalization of PCA
+
+.center[ 
+&lt;img align = "center" src="images/multipleFactorAnalysis.png" width = "100%"&gt; 
+]
+---
+
+# A Colon Cancer Example
+
+- A set of 121 tumors from the TCGA (Weinstein, Collisson, Mills, et al. 2013) colorectal cancer cohort is analyzed. 
+
+- The tumors have been profiled for 
+    - gene expression using RNA-seq,
+    - mutations using Exome-seq, and 
+    - copy number variations using genotyping arrays.
+    
+- Although two tumors arise in the colon, they may have distinct molecular profiles, which is important for treatment decisions.
+- The subset of tumors used in this chapter belong to two distinct molecular subtypes CMS1, CMS3
+
+---
+
+# A Colon Cancer Example
+
+## Single omics don't separate well
+
+.center[ 
+&lt;img align = "center" src="images/heatmapsMultiomicsColonCancerStudy1.png" width = "90%"&gt; 
+]
+
+---
+
+# A Colon Cancer Example
+
+## Joint omics factorization provides much better separation
+
+.center[ 
+&lt;img align = "center" src="images/multipleFactorAnalysisInColonCancer.png" width = "100%"&gt; 
+]
+
+---
+
+# Summary part I
+
+- Biological Processes are complex and they are "probably" better revealed using distinct sources of information.
+
+- While there are many approache for the integrative analysis there is no universal "IODA" method.
+
+  - Many families of many types of methods available: Need to be related, classified, filtered, benchmarked.
+  - In many situations biology must guide the analysis
+  - All data are not equally informative and it is often the case that some omics dominate others. : "Gene expression and _what else_?"
+
+---
+
+# The workshop
+
+- Details and examples of single and multi-omics analyses are provided in the workshop.
+
+- Access [https://github.com/alexsanchezpla/202107-GRBio-Integration-Workshop](https://github.com/alexsanchezpla/202107-GRBio-Integration-Workshop) for the workshop materials.
+
+  - You can clone or download the repository (see previous GRBio workshops)
+  - Run the `InstallPackages.R` script in your computer to be sure all packages can be installed
+
+- __Warning__ the materials will be updated. Be sure to refressh the repository tomorrow at 9:30
+
+
 
 ---
 
@@ -394,7 +518,7 @@ groups.
 
 ---
 
-# Data integration with biological Annottaions
+# Data Integration with Annotations
 ### Ferran Briansó, Alex Sánchez
 
 &lt;img align = "center" src="images/integrationWithAnnotations1.png" width = "90%"&gt; 
@@ -402,7 +526,7 @@ groups.
 
 ---
 
-# Data integration with biological Annottaions
+# Data Integration with Annotations
 ### Ferran Briansó, Alex Sánchez
 
 &lt;img align = "center" src="images/integrationWithAnnotations2.png" width = "90%"&gt; 
@@ -410,14 +534,20 @@ groups.
 
 ---
 
-# Data integration with biological Annottaions
+# Data Integration with Annotations
 ### Ferran Briansó, Alex Sánchez
 
 &lt;img align = "center" src="images/integrationWithAnnotations3.png" width = "90%"&gt; 
 
-
 ---
 
+# The goProfiles Approach
+
+## Pablo Flores, Jordi Ocaña, Miquel Salicrú i Álex Sánchez
+
+&lt;img align = "center" src="images/SimpleFunctionalProfile4cat.png" width = "70%"&gt; 
+
+---
 
 class: inverse, middle, center
 
@@ -544,14 +674,25 @@ facilitating the interoperability of the clinical information systems of the dif
 
 # New Skills: 
 
-  - data sharing, 
-  - data exchange (OMOP, HL7)
-  - data FAIRification,
-  - cloud computing, 
-  - open science,
-  - reproducibility,
-  - (federated) data analysis,
-  - and, of course AI and ML
+&lt;p&gt;
+
+
+## data sharing, 
+  
+## data exchange (OMOP, HL7)
+  
+## data FAIRification,
+  
+## cloud computing, 
+  
+## open science,
+  
+## reproducibility,
+  
+## (federated) data analysis,
+  
+## and, of course AI and ML
+
 
 ---
 
@@ -563,12 +704,11 @@ name: DataProjects
 
 ---
 
-# The Data Science Projects Platform @VHIR
-
+# Data Science Projects Platform @VHIR
 - The increasing needs in Data related projects leads to new structures to manage this.
 
 .center[ 
-&lt;img align = "center" src="images/organigramaUEB.png" width = "80%"&gt; 
+&lt;img align = "center" src="images/organigramaUEB.png" width = "70%"&gt; 
  ] 
 
 ---
@@ -620,9 +760,23 @@ name: Estrategia
 
 # Looking ahead
 
+- The analysis of Omics Data is an example of fruitful development between Statistics and Biological (Health) Sciences.
+
+- As more data is becoming available some therapeutical possibilities approach reality.
+
+- While Statistics will always be relevant to guide this approach other skills become important.
+
+- We must, at least, be aware of these skills and the problems they address because this is really an unprecedent opportunity.
+
+
 ---
 
 
+# Acknowledgements
+
+.center[ 
+&lt;img align = "center" src="images/acknowledgements2021.png" width = "80%"&gt; 
+ ] 
 
 
     </textarea>
