@@ -263,6 +263,15 @@ Gilbert Strang.
 
 ---
 
+---
+# Omics technolgies yield data matrices
+
+.center[ 
+<img align = "center" src="images/omicsMatrix.png" width = "90%"> 
+]
+
+---
+
 # Matrices can be factored
 
 -  Factorization helps discover the "true" biological dimension <br>
