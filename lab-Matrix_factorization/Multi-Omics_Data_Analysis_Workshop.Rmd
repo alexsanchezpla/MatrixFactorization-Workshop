@@ -95,12 +95,12 @@ kableExtra::kable(timeTable) %>% kableExtra::kable_styling()
 
 The examples used in the workshop have been extracted from two sources
 
--   Chapters 4 and 11 of the excellent book [Computational Genomics with R](https://compgenomr.github.io/book/)
--   The suplementary materials from the paper [Enter the Matrix: Factorization uncovers knowledge from omics](https://www.sciencedirect.com/science/article/pii/S0168952518301240)
+-   Chapters 4 and 11 of the excellent book [Computational Genomics with R](https://compgenomr.github.io/book/) which we will address as "CompGenomR".
+-   The suplementary materials from the paper [Enter the Matrix: Factorization uncovers knowledge from omics](https://www.sciencedirect.com/science/article/pii/S0168952518301240). The paper contains very nice examples but unfortunately (oh surprise!) I have been unable to find the data.
+- Some tutorials and materials scattered in the web:
+  - [Tutorial on SummarizedExperiment](https://www.bioconductor.org/help/course-materials/2019/BSS2019/04_Practical_CoreApproachesInBioconductor.html)
+  - [Introduction to Pathway Analysis with Bioconductor](https://github.com/ASPteaching/An-Introduction-to-Pathway-Analysis-with-R-and-Bioconductor)
 
-Both sources are freely available on the web.
-
-Although some of the code has been adapted for completeness and ease of use, credit has to be given to the authors of these materials.
 
 ### Bioc-2018
 
@@ -114,25 +114,22 @@ Although some of the code has been adapted for completeness and ease of use, cre
 
 ### Getting the data for the example
 
-We start with a subset (1000 genes) of gene expression matrix obtained from the package `leukemiasEset` .
+In this example we work with  al leukemia data set that has been derrived from the [`leukemiasEset` Bioconductor package](https://bioconductor.org/packages/release/data/experiment/html/leukemiasEset.html).
+This data set contains gene expression values from 60 bone marrow samples of patients with one of the four main types of leukemia (ALL, AML, CLL, CML) or no-leukemia controls. 
 
-The data have been pre-processed with the code below that keeps the 1000 most variable genes.
+In order to avoid working with all the data the data set has been trimmed down _to the top 1000 most variable genes_. THis allows working with it more easily, since genes that are not very variable do not contribute much to the distances between patients. 
 
-This dataset and other used in the workshop are available in package `compGenomDataR`.
+The code below shows how to recreate the dataset.
 
-Given that this package is rather *heavy to download and install* we have extracted this dataset and the ones for the multi-omics example and have put them in the subdirectory "data". That is, data can be directly read from inside your rstudio project.
-
-Last it has to be noticed that, for this example we would not even need the data because the code below shows how to recreate the dataset.
-
-```{r eval=FALSE}
+```{r prepareLeukemiaSubset, eval=FALSE}
 setwd("lab-Matrix_factorization")
 if (!exists("datasets/leukemiaExpressionSubset.rds")){
   library(leukemiasEset)
   data("leukemiasEset")
   library(SummarizedExperiment)
   leukemiaSummExp <-as(leukemiasEset, "SummarizedExperiment")
-  mat1=assay(leukemiaSummExp)
-  mat1=(limma::normalizeQuantiles(mat1))
+  mat0=assay(leukemiaSummExp)
+  mat1=(limma::normalizeQuantiles(mat0))
   mat2=mat1[order(matrixStats::rowSds(mat1)/rowMeans(mat1)),][1:1000,]
   saveRDS(mat2,"datasets/leukemiaExpressionSubset.rds")
   saveRDS(mat1,"datasets/leukemiaExpression.rds")
@@ -192,16 +189,16 @@ Grouping is done by hierarchichal clustering.
 See [this section](https://compgenomr.github.io/book/clustering-grouping-samples-based-on-their-similarity.html) in CompGenomR book for details.
 
 
-```{r}
+```{r exploreLeukemia}
 library(pheatmap)
 expFile="datasets/leukemiaExpressionSubset.rds"
 mat=readRDS(expFile)
 
 # set the leukemia type annotation for each sample
+# this has to be a dta frame
 annotation_col = data.frame(
                     LeukemiaType =substr(colnames(mat),1,3))
 rownames(annotation_col)=colnames(mat)
-  
 pheatmap(mat,show_rownames=FALSE,show_colnames=FALSE,
          annotation_col=annotation_col,
          scale = "none",clustering_method="ward.D2",
@@ -211,10 +208,9 @@ pheatmap(mat,show_rownames=FALSE,show_colnames=FALSE,
 
 ## Visualizing complex datasets in reduced dimension
 
-Gene expression is not independent between genes
+One reason for wanting to find a representation of the data in reduced dimension comes from the fact that genes show correlated expressions as can be seen in the example below where the expression of genes CD33 and PYGL[^It is not obvious how to move from rownames, which are "ENSEMBL" IDs to gene symbols. However it is pretty straightforward using annotation functions in Bioconductor. See for example https://github.com/ASPteaching/An-Introduction-to-Pathway-Analysis-with-R-and-Bioconductor] is shown across leukemia patients.
 
-```{r}
-## ----scatterb4PCA,out.width='60%',fig.width=5.5, fig.cap="Gene expression values of CD33 and PYGL genes across leukemia patients."----
+```{r scatterb4PCA}
 plot(mat[rownames(mat)=="ENSG00000100504",],
      mat[rownames(mat)=="ENSG00000105383",],pch=19,
      ylab="CD33 (ENSG00000105383)",
@@ -223,14 +219,14 @@ plot(mat[rownames(mat)=="ENSG00000100504",],
 
 ### Principal Components Analysis and SVD
 
-PCA provides a new coordinate system where "eigenGenes", whatever they are, become independent.
+PCA provides a new coordinate system based on the _eigenVectors_ which point into the directions of highest variance. The new axis, that we can call "eigenGenes", whatever they are, are orthogonal to each other describing non-overlapping structure in the data.
 
-```{r}
-## ----pcaRot,out.width='60%',fig.width=8.5,fig.cap="Geometric interpretation of PCA finding eigenvectors that point to the direction of highest variance. Eigenvectors can be used as a new coordinate system."----
+Our goal is usually to see the samples in the space derived from genes space but of lesser dimension. Notice that for maling this possible  we transpose the matrix so samples are on the columns.
+
+```{r PCArot}
 par(mfrow=c(1,2))
 # create the subset of the data with two genes only
-# notice that we transpose the matrix so samples are 
-# on the columns
+#
 sub.mat=t(mat[rownames(mat) %in% c("ENSG00000100504","ENSG00000105383"),])
 # ploting our genes of interest as scatter plots
 plot(scale(mat[rownames(mat)=="ENSG00000100504",]),
@@ -262,25 +258,27 @@ arrows(x0=0, y0=0, x1 =-2,
          y1 = 0,col="pink",lwd=3)
 arrows(x0=0, y0=0, x1 = 0, 
          y1 = -1,col="gray",lwd=3)
+legend("bottomright",
+       legend=unique(annotation_col$LeukemiaType),
+       fill =palette("default"),
+       border=NA,box.col=NA)
 
 ```
 
 PCA is done either by the eigen decomposition of the covariance matrix or the SVD of the data.
 
-```{r}
+```{r eigenOnCovMat}
 ## ----eigenOnCovMat,eval=FALSE--------------------------------------------------------------------------------
 ## cov.mat=cov(sub.mat) # calculate covariance matrix
 ## cov.mat
 ## eigen(cov.mat) # obtain eigen decomposition for eigen values and vectors
 ```
 
-```{r}
-## ----SVDcartoon,echo=FALSE,fig.align='center',out.width='60%',fig.cap="Singular value decomposition (SVD) explained in a diagram. "----
+```{r SVDcartoon, echo=FALSE, fig.align='center',out.width='60%',fig.cap="Singular value decomposition (SVD) explained in a diagram"}
 knitr::include_graphics("images/SVDcartoon.png")
 ```
 
-```{r}
-## ----svd,out.width='65%',fig.width=8.5,fig.cap="SVD on the matrix and its transpose"-------------------------
+```{r svd,out.width='65%',fig.width=8.5,fig.cap="SVD on the matrix and its transpose"}
 par(mfrow=c(1,2))
 d=svd(scale(mat)) # apply SVD
 assays=t(d$u) %*% scale(mat) # projection on eigenassays
@@ -305,6 +303,10 @@ knitr::include_graphics("images/SVDlatentExample.png")
 
 ### Independent Components Analysis (ICA)
 
+ICA assumes that there are a set of k independent sources of variation that give rise to the observed data matrix . This method enforces that the columns of U yields components that are statistically independent of each other.
+
+The resulting factors ideally represent independent sources of variation in the biological system.
+
 ```{r, fig.cap="Independent Component Analysis (ICA)" }
 knitr::include_graphics("images/ICAcartoon.png")
 ```
@@ -318,6 +320,8 @@ plot(ica.res$S[,1],ica.res$S[,2],col=as.factor(annotation_col$LeukemiaType))
 ```
 
 ### Non-negative matrix factorization
+
+Non-negative matrix factorization (NMF) is a group of algorithms that constrains all elements of the  and  matrices to be greater than or equal to zero. The non-negativity constraint makes the representation purely additive, with no sources that can explain the data by removing signal. 
 
 ```{r, fig.cap="Non-negative matrix factorization summary",out.width='70%'}
 knitr::include_graphics("images/NMFcartoon.png")
@@ -342,8 +346,13 @@ plot(h[1,],h[3,],col=as.factor(annotation_col$LeukemiaType),pch=19)
 
 ### Multidimensional Scaling
 
-```{r }
-## ----mds2,out.width='60%',fig.width=8.5,fig.cap="Leukemia gene expression values per patient on reduced dimensions by classical MDS and isometric MDS."----
+MDS provides a way to represent the distances between objects (or patients) in a high-dimensional space with a set of points in a low-dimensional space without losing much information.
+
+The classic solution is also known as Principal Coordinate Analysis (PCoA).
+
+Recent extensions take this solution as a starting point to optimize other cost functions. The result is non-metric MDS methods.
+
+```{r MDS}
 mds=cmdscale(dist(t(mat)))
 isomds=MASS::isoMDS(dist(t(mat)))
 # plot the patients in the 2D space
@@ -356,7 +365,13 @@ plot(isomds$points,pch=19,col=as.factor(annotation_col$LeukemiaType),
 
 ### t-SNE
 
-```{r }
+It is a technique similar to MDS. It allows representing the distances in high-dimensional space with points whose distances reproduce the previous ones.
+
+The main difference with the MDS is that t-SNE is intended to _preserve local structures_ and it disregards distant elements. For this a parameter of "perplexity" is used.
+
+The method constructs probabilities (as similarities) and tries to achieve a reduced-dimensional structure whose probabilities are adjusted by minimizing the Kullback-Leibler divergence due to the descent of the gradient.
+
+```{r tSNE }
 ## ----tsne,eval=TRUE, out.width='60%',fig.width=5, fig.cap="t-SNE of leukemia expression dataset"-------------
 library("Rtsne")
 set.seed(42) # Set a seed if you want reproducible results
@@ -381,22 +396,6 @@ legend("bottomleft",
 ## - Intro to t-SNE: https://www.oreilly.com/learning/an-illustrated-introduction-to-the-t-sne-algorithm
 
 ```
-
-<!-- ## Use case II: Revealing distinct data characteristics using distinct factorizations. -->
-
-<!-- This example uses expression data, downloaded from the GTEx database  -->
-
-<!-- - to illustrate how to explore the data using several factorization techniques and  -->
-
-<!-- - to show how distinct factorizations uncover distnct characteristics from the data. -->
-
-<!-- ```{r} -->
-
-<!-- library('fastICA') -->
-
-<!-- library('pca3d') -->
-
-<!-- ``` -->
 
 # Part II. Multi-Omics Analysis
 
