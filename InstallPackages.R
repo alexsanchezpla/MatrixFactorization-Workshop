@@ -23,7 +23,7 @@ installifnot("dplyr", BioC=FALSE)
 installifnot("fastICA", BioC=FALSE)
 installifnot("Rtsne", BioC=FALSE)
 
-# installifnot("pca3d", BioC=FALSE)
+installifnot("magrittr", BioC=FALSE)
 
 installifnot("matrixStats", BioC=FALSE)
 installifnot("FactoMineR", BioC=FALSE)

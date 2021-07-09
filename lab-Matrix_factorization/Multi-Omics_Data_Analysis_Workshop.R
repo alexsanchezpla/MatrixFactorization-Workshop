@@ -1,65 +1,15 @@
----
-title: Multi-Omics Data Analysis Workshop
-author: "Alex Sanchez-Pla, Francesc Carmona, Pol Castellano"
-date: "July 2021"
-output:
-# prettydoc::html_pretty:
-   html_document:
-    code_folding: hide
-    toc: true
-    toc_depth: 3
-    theme: darkly
-    highlight: textmate
-    number_sections: true
-editor_options: 
-  chunk_output_type: console
-# bibliography: references.bib
-# link-citations: yes
-# theme args should be one of: "default", "cerulean", "journal", "flatly", "darkly", "readable", "spacelab", "united", "cosmo", "lumen", "paper", "sandstone", "simplex", "yeti"
-# highlight arg should be one of: "default", "tango", "pygments", "kate", "monochrome", "espresso", "zenburn", "haddock", "breezedark", "textmate"
----
-
-```{r setup, include=FALSE}
+## ----setup, include=FALSE---------------------------------------------------------------------------------------------------------------------------------
 require(knitr)
 knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, comment = NA, prompt = TRUE, tidy = FALSE, fig.width = 7, fig.height = 7, fig_caption = TRUE,cache=FALSE)
 Sys.setlocale("LC_TIME", "C")
-```
 
-```{r packages, include=FALSE}
+
+## ----packages, include=FALSE------------------------------------------------------------------------------------------------------------------------------
 # require(devtools)
 # if(!require(installifnot)) install_github("uebvhir/installifnot")
-```
 
-# Workshop structure
 
-## Instructor Names
-
--   Alex Sánchez ([asanchez\@ub.edu](mailto:asanchez@ub.edu){.email})
--   Francesc Carmona ([fcarmona\@ub.edu](mailto:fcarmona@ub.edu){.email}),
--   Pol Castellano ([pcastellano\@gmail](mailto:pcastellano@gmail){.email},com)
-
-## Workshop Description
-
-The workshop works through a pipeline that investigates the structure of a single or multiple omics dataset in order to determine the association between omics and phenotype characteristics such as disease type.
-
-### Pre-requisites
-
--   Good knowledge of R and familiarity with dimension reduction techniques.
--   Familiarity with omics techniques and Bioconductor is a plus.
-
-### Workshop Participation
-
-Execution of example code and hands-on practice
-
-### R/Bioconductor packages needed
-
-The workshop requires a series of R and Bioconductor packages.
-
-**Before you start** run the script `InstallPackages.R` available in the project main folder.
-
-### Time outline
-
-```{r}
+## ---------------------------------------------------------------------------------------------------------------------------------------------------------
 library(dbplyr)
 outline <- c("Workshop presentation and Overview", "10m",
 "Exploring single omics datasets", "20m",
@@ -72,129 +22,51 @@ timeTable<- matrix(outline, ncol=2, byrow = TRUE)
 colnames(timeTable) <- c("Activity", "Time")
 
 kableExtra::kable(timeTable) %>% kableExtra::kable_styling()
-```
-
-## Workshop goals and objectives
-
-### Learning goals
-
--   The general goal is to become familiar on how to use matrix factorization techniques using R.
--   A secondary optional goal is become familiar with some Bioconductor data structures such as `SummarizedExperiment` or `MultiAssayData` created to facilitate the management of single or multi-omics data.
-
-### Learning objectives
-
--   Learn to apply a variety of singl and multiple matrix factorization techniques
--   Understand the difference between PCA, ICA and NMF through some examples
--   Understand why we may need to ressort to multi-omics analysis and how to do using either MFA or joint matrix factorization
--   Learn how to attempt a biological interpretation of single or multi-omics using enrichment analysis.
--   Learn how to create and use objects of classes `SuimmarizedExperiment` and `MultiAssayData` to store and manipulate omics data.
-
-## Resources and links
-
-## Source of the examples
-
-The examples used in the workshop have been extracted from two sources
-
--   Chapters 4 and 11 of the excellent book [Computational Genomics with R](https://compgenomr.github.io/book/) which we will address as "CompGenomR".
--   The suplementary materials from the paper [Enter the Matrix: Factorization uncovers knowledge from omics](https://www.sciencedirect.com/science/article/pii/S0168952518301240). The paper contains very nice examples but unfortunately (oh surprise!) I have been unable to find the data.
-- Some tutorials and materials scattered in the web:
-  - [Tutorial on SummarizedExperiment](https://www.bioconductor.org/help/course-materials/2019/BSS2019/04_Practical_CoreApproachesInBioconductor.html)
-  - [Introduction to Pathway Analysis with Bioconductor](https://github.com/ASPteaching/An-Introduction-to-Pathway-Analysis-with-R-and-Bioconductor)
 
 
-### Bioc-2018
-
-<https://bioconductor.github.io/BiocWorkshops/workflow-for-multi-omics-analysis-with-multiassayexperiment.html>
-
-<https://bioconductor.github.io/BiocWorkshops/functional-enrichment-analysis-of-high-throughput-omics-data.html>
-
-# Part I. Exploratory Analysis of Single Omics Datasets with Unsupervised methods
-
-## Use case 1. Studying leukemia using gene expression microarrays
-
-### Getting the data for the example
-
-In this example we work with  al leukemia data set that has been derrived from the [`leukemiasEset` Bioconductor package](https://bioconductor.org/packages/release/data/experiment/html/leukemiasEset.html).
-This data set contains gene expression values from 60 bone marrow samples of patients with one of the four main types of leukemia (ALL, AML, CLL, CML) or no-leukemia controls. 
-
-In order to avoid working with all the data the data set has been trimmed down _to the top 1000 most variable genes_. THis allows working with it more easily, since genes that are not very variable do not contribute much to the distances between patients. 
-
-The code below shows how to recreate the dataset.
-
-```{r prepareLeukemiaSubset, eval=FALSE}
-library(stringi)
-myDir <- getwd() 
-myDir <-unlist(stri_split_regex(myDir, "/"))
-currDir <- myDir[length(myDir)]
-if (currDir=="202107-GRBio-Integration-Workshop") setwd("lab-Matrix_factorization")
-
-if (!exists("datasets/leukemiaExpressionSubset.rds")){
-  library(leukemiasEset)
-  data("leukemiasEset")
-  library(SummarizedExperiment)
-  leukemiaSummExp <-as(leukemiasEset, "SummarizedExperiment")
-  mat0=assay(leukemiaSummExp)
-  mat1=(limma::normalizeQuantiles(mat0))
-  mat2=mat1[order(matrixStats::rowSds(mat1)/rowMeans(mat1)),][1:1000,]
-  saveRDS(mat2,"datasets/leukemiaExpressionSubset.rds")
-  saveRDS(mat1,"datasets/leukemiaExpression.rds")
-}else{
-  mat=readRDS("datasets/leukemiaExpressionSubset.rds")
-}
-```
-
-Alternatively if you suceeded to install the `CompGenomRData`package you can use:
-
-```{r eval=FALSE}
-expFile=system.file("extdata","leukemiaExpressionSubset.rds",
-                    package="compGenomRData")
-mat=readRDS(expFile)
-```
+## ----prepareLeukemiaSubset, eval=FALSE--------------------------------------------------------------------------------------------------------------------
+## library(stringi)
+## myDir <- getwd()
+## myDir <-unlist(stri_split_regex(myDir, "/"))
+## currDir <- myDir[length(myDir)]
+## if (currDir=="202107-GRBio-Integration-Workshop") setwd("lab-Matrix_factorization")
+## 
+## if (!exists("datasets/leukemiaExpressionSubset.rds")){
+##   library(leukemiasEset)
+##   data("leukemiasEset")
+##   library(SummarizedExperiment)
+##   leukemiaSummExp <-as(leukemiasEset, "SummarizedExperiment")
+##   mat0=assay(leukemiaSummExp)
+##   mat1=(limma::normalizeQuantiles(mat0))
+##   mat2=mat1[order(matrixStats::rowSds(mat1)/rowMeans(mat1)),][1:1000,]
+##   saveRDS(mat2,"datasets/leukemiaExpressionSubset.rds")
+##   saveRDS(mat1,"datasets/leukemiaExpression.rds")
+## }else{
+##   mat=readRDS("datasets/leukemiaExpressionSubset.rds")
+## }
 
 
-#### Bonus: Working with container classes
-
-The code above has provided us with an instance of `ExpressionSet`which contains, not only the gene expression data, but also the information on covariates, about the experiment or about the type of microarrays used to generate the data.
-
-`ExpressionSet`class has been substituted by `SummarizedExperiment` so the object `LeukemiaEset` of class `ExpressionSet` has been converted into a new object `leukemiaSummExp` from class `SummarizedExperiment`.
-
-[This link](https://www.bioconductor.org/help/course-materials/2019/BSS2019/04_Practical_CoreApproachesInBioconductor.html) contains a nice tutorial on the topic.
-
-The image below has been taken from this tutorial:
-
-![SummarizedExperiment](images/summarizedExperiment.png)
-
-Accessing and using objects of class `SummarizedExperiment` becomes very intuitive after some use.
-
-```{r eval=FALSE}
-leukemiaSummExp
-dim(assay(leukemiaSummExp))
-metadata(leukemiaSummExp)
-colData(leukemiaSummExp)
-dim(colData(leukemiaSummExp))
-```
-
-One of its most interesting functionality is that subsetting is applied on all related "sub-objects" (slots).
-
-```{r eval=FALSE}
-leukemiaSub <-leukemiaSummExp[,1:10] 
-dim(assay(leukemiaSub))
-dim(colData(leukemiaSub))
-```
-
-### Exploring data in its original space
-
-The most common way to visualize omics data is using _heatmaps_. 
-
-These plots  show expression values using a colour scale for numeric values.
-
-They are usually set to group rows and/or columns based on their similarity. 
-Grouping is done by hierarchichal clustering.
-
-See [this section](https://compgenomr.github.io/book/clustering-grouping-samples-based-on-their-similarity.html) in CompGenomR book for details.
+## ----eval=FALSE-------------------------------------------------------------------------------------------------------------------------------------------
+## expFile=system.file("extdata","leukemiaExpressionSubset.rds",
+##                     package="compGenomRData")
+## mat=readRDS(expFile)
 
 
-```{r exploreLeukemia}
+## ----eval=FALSE-------------------------------------------------------------------------------------------------------------------------------------------
+## leukemiaSummExp
+## dim(assay(leukemiaSummExp))
+## metadata(leukemiaSummExp)
+## colData(leukemiaSummExp)
+## dim(colData(leukemiaSummExp))
+
+
+## ----eval=FALSE-------------------------------------------------------------------------------------------------------------------------------------------
+## leukemiaSub <-leukemiaSummExp[,1:10]
+## dim(assay(leukemiaSub))
+## dim(colData(leukemiaSub))
+
+
+## ----exploreLeukemia--------------------------------------------------------------------------------------------------------------------------------------
 library(stringi)
 myDir <- getwd() 
 myDir <-unlist(stri_split_regex(myDir, "/"))
@@ -215,27 +87,16 @@ pheatmap(mat,show_rownames=FALSE,show_colnames=FALSE,
          annotation_col=annotation_col,
          scale = "none",clustering_method="ward.D2",
          clustering_distance_cols="euclidean")
-```
 
 
-## Visualizing complex datasets in reduced dimension
-
-One reason for wanting to find a representation of the data in reduced dimension comes from the fact that genes show correlated expressions as can be seen in the example below where the expression of genes CD33 and PYGL[^It is not obvious how to move from rownames, which are "ENSEMBL" IDs to gene symbols. However it is pretty straightforward using annotation functions in Bioconductor. See for example https://github.com/ASPteaching/An-Introduction-to-Pathway-Analysis-with-R-and-Bioconductor] is shown across leukemia patients.
-
-```{r scatterb4PCA}
+## ----scatterb4PCA-----------------------------------------------------------------------------------------------------------------------------------------
 plot(mat[rownames(mat)=="ENSG00000100504",],
      mat[rownames(mat)=="ENSG00000105383",],pch=19,
      ylab="CD33 (ENSG00000105383)",
      xlab="PYGL (ENSG00000100504)")
-```
 
-### Principal Components Analysis and SVD
 
-PCA provides a new coordinate system based on the _eigenVectors_ which point into the directions of highest variance. The new axis, that we can call "eigenGenes", whatever they are, are orthogonal to each other describing non-overlapping structure in the data.
-
-Our goal is usually to see the samples in the space derived from genes space but of lesser dimension. Notice that for maling this possible  we transpose the matrix so samples are on the columns.
-
-```{r PCArot}
+## ----PCArot-----------------------------------------------------------------------------------------------------------------------------------------------
 par(mfrow=c(1,2))
 # create the subset of the data with two genes only
 #
@@ -275,22 +136,20 @@ legend("bottomright",
        fill =palette("default"),
        border=NA,box.col=NA)
 
-```
 
-PCA is done either by the eigen decomposition of the covariance matrix or the SVD of the data.
 
-```{r eigenOnCovMat}
+## ----eigenOnCovMat----------------------------------------------------------------------------------------------------------------------------------------
 ## ----eigenOnCovMat,eval=FALSE--------------------------------------------------------------------------------
 ## cov.mat=cov(sub.mat) # calculate covariance matrix
 ## cov.mat
 ## eigen(cov.mat) # obtain eigen decomposition for eigen values and vectors
-```
 
-```{r SVDcartoon, echo=FALSE, fig.align='center',out.width='60%',fig.cap="Singular value decomposition (SVD) explained in a diagram"}
+
+## ----SVDcartoon, echo=FALSE, fig.align='center',out.width='60%',fig.cap="Singular value decomposition (SVD) explained in a diagram"-----------------------
 knitr::include_graphics("images/SVDcartoon.png")
-```
 
-```{r svd,out.width='65%',fig.width=8.5,fig.cap="SVD on the matrix and its transpose"}
+
+## ----svd,out.width='65%',fig.width=8.5,fig.cap="SVD on the matrix and its transpose"----------------------------------------------------------------------
 par(mfrow=c(1,2))
 d=svd(scale(mat)) # apply SVD
 assays=t(d$u) %*% scale(mat) # projection on eigenassays
@@ -303,45 +162,33 @@ pr=prcomp(t(mat),center=TRUE,scale=TRUE) # apply PCA on transposed matrix
 # since the matrix is transposed eigenvectors represent 
 plot(pr$x[,1],pr$x[,2],col=as.factor(annotation_col$LeukemiaType))
 
-```
 
-```{r out.width='70%',fig.cap= "Singular value decomposition (SVD) reorganized as multiplication of m-by-n weights matrix and eigenvectors"}
+
+## ----out.width='70%',fig.cap= "Singular value decomposition (SVD) reorganized as multiplication of m-by-n weights matrix and eigenvectors"----------------
 knitr::include_graphics("images/SVDasWeights.png")
-```
 
-```{r, fig.cap="Gene expression of a gene can be regarded as a linear combination of eigenvectors. "}
+
+## ---- fig.cap="Gene expression of a gene can be regarded as a linear combination of eigenvectors. "-------------------------------------------------------
 knitr::include_graphics("images/SVDlatentExample.png")
-```
 
-### Independent Components Analysis (ICA)
 
-ICA assumes that there are a set of k independent sources of variation that give rise to the observed data matrix . This method enforces that the columns of U yields components that are statistically independent of each other.
-
-The resulting factors ideally represent independent sources of variation in the biological system.
-
-```{r, fig.cap="Independent Component Analysis (ICA)" }
+## ---- fig.cap="Independent Component Analysis (ICA)"------------------------------------------------------------------------------------------------------
 knitr::include_graphics("images/ICAcartoon.png")
-```
 
-```{r, out.width='50%',fig.width=5,fig.cap="Leukemia gene expression values per patient on reduced dimensions by ICA."}
+
+## ---- out.width='50%',fig.width=5,fig.cap="Leukemia gene expression values per patient on reduced dimensions by ICA."-------------------------------------
 ## ----fastICAex, ----
 library(fastICA)
 ica.res=fastICA(t(mat),n.comp=2) # apply ICA
 # plot reduced dimensions
 plot(ica.res$S[,1],ica.res$S[,2],col=as.factor(annotation_col$LeukemiaType))
-```
 
-### Non-negative matrix factorization
 
-Non-negative matrix factorization (NMF) is a group of algorithms that constrains all elements of the  and  matrices to be greater than or equal to zero. The non-negativity constraint makes the representation purely additive, with no sources that can explain the data by removing signal. 
-
-```{r, fig.cap="Non-negative matrix factorization summary",out.width='70%'}
+## ---- fig.cap="Non-negative matrix factorization summary",out.width='70%'---------------------------------------------------------------------------------
 knitr::include_graphics("images/NMFcartoon.png")
-```
 
-Leukemia gene expression values per patient on reduced dimensions by NMF. Components 1 and 3 is used for the plot.
 
-```{r}
+## ---------------------------------------------------------------------------------------------------------------------------------------------------------
 library(NMF)
 res=NMF::nmf(mat,rank=3,seed="nndsvd") # nmf with 3 components/factors
 w <- basis(res) # get W
@@ -354,17 +201,9 @@ plot(h[1,],h[3,],col=as.factor(annotation_col$LeukemiaType),pch=19)
 
 ## The NMF package vignette has extensive information on how to run NMF to get stable results and an estimate of components: https://cran.r-project.org/web/packages/NMF/vignettes/NMF-vignette.pdf
 
-```
 
-### Multidimensional Scaling
 
-MDS provides a way to represent the distances between objects (or patients) in a high-dimensional space with a set of points in a low-dimensional space without losing much information.
-
-The classic solution is also known as Principal Coordinate Analysis (PCoA).
-
-Recent extensions take this solution as a starting point to optimize other cost functions. The result is non-metric MDS methods.
-
-```{r MDS}
+## ----MDS--------------------------------------------------------------------------------------------------------------------------------------------------
 mds=cmdscale(dist(t(mat)))
 isomds=MASS::isoMDS(dist(t(mat)))
 # plot the patients in the 2D space
@@ -373,17 +212,9 @@ plot(mds,pch=19,col=as.factor(annotation_col$LeukemiaType),
      main="classical MDS")
 plot(isomds$points,pch=19,col=as.factor(annotation_col$LeukemiaType),
      main="isotonic MDS")
-```
 
-### t-SNE
 
-It is a technique similar to MDS. It allows representing the distances in high-dimensional space with points whose distances reproduce the previous ones.
-
-The main difference with the MDS is that t-SNE is intended to _preserve local structures_ and it disregards distant elements. For this a parameter of "perplexity" is used.
-
-The method constructs probabilities (as similarities) and tries to achieve a reduced-dimensional structure whose probabilities are adjusted by minimizing the Kullback-Leibler divergence due to the descent of the gradient.
-
-```{r tSNE }
+## ----tSNE-------------------------------------------------------------------------------------------------------------------------------------------------
 ## ----tsne,eval=TRUE, out.width='60%',fig.width=5, fig.cap="t-SNE of leukemia expression dataset"-------------
 library("Rtsne")
 set.seed(42) # Set a seed if you want reproducible results
@@ -407,26 +238,9 @@ legend("bottomleft",
 
 ## - Intro to t-SNE: https://www.oreilly.com/learning/an-illustrated-introduction-to-the-t-sne-algorithm
 
-```
 
-# Part II. Multi-Omics Analysis
 
-## Use case: multi-omics data for colo-rectal cancer
-
-For this use case we use thre distinct omics that have been downloaded from the TCGA database. 
-Notice that the data matrices are transposed with respect the one we used above. 
-
-This allows joining the distinct omics by their common dimension, the samples.
-
-The omics data used are:
-
-- _Gene expression (RNA-seq) data_ The rows correspond to patients, referred to by their TCGA identifier, as the first column of the table. Columns represent the genes, and the values are RPKM normalized expression values. The column names are the names or symbols of the genes.
-
-- _Mutation Data_ In the mutation matrix, each cell is a binary 1/0, indicating whether or not a tumor has a non-synonymous mutation in the gene indicated by the column. These types of mutations change the aminoacid sequence, therefore they are likely to change the function of the protein.
-  
-- _Copy Number Variation data_ During transformation from healthy cells to cancer cells, the genome sometimes undergoes large-scale instability; large segments of the genome might be replicated or lost. This will be reflected in each segment’s “copy number”. In this matrix, each column corresponds to a chromosome segment, and the value of the cell is a real-valued score indicating if this segment has been amplified (copied more) or lost, relative to a non-cancer control from the same patient.
-
-```{r}
+## ---------------------------------------------------------------------------------------------------------------------------------------------------------
 library(stringi)
 myDir <- getwd() 
 myDir <-unlist(stri_split_regex(myDir, "/"))
@@ -478,34 +292,26 @@ rownames(anno_col) <- rownames(covariates)
 knitr::kable(head(anno_col), 
              caption="Clinical information (covariates)")
 
-```
 
-#### Explore individual datasets
 
-Gene Expression data
-
-```{r}
+## ---------------------------------------------------------------------------------------------------------------------------------------------------------
 pheatmap::pheatmap(x1,
                    annotation_col = anno_col,
                    show_colnames = FALSE,
                    show_rownames = FALSE,
                    main="Gene expression data")
-```
 
-Mutation data
 
-```{r}
+## ---------------------------------------------------------------------------------------------------------------------------------------------------------
 ## ------------------------------------------------------------------------------------------------------------
 pheatmap::pheatmap(x2,
                    annotation_col = anno_col,
                    show_colnames = FALSE,
                    show_rownames = FALSE,
                    main="Mutation data")
-```
 
-Copy number data
 
-```{r}
+## ---------------------------------------------------------------------------------------------------------------------------------------------------------
 ## ------------------------------------------------------------------------------------------------------------
 pheatmap::pheatmap(x3,
                    annotation_col = anno_col,
@@ -513,32 +319,9 @@ pheatmap::pheatmap(x3,
                    show_rownames = FALSE,
                    main="Copy number data")
 
-```
 
-## Matrix factorization methods for unsupervised multiomics integration
 
-### Multiple Factor Analysis
-
-Simply stated MFA is an extension of PCA to a multi-omics dataset.
-
-Given that the distinct experiments have distinct scalesand distinct variances we scale each dataset by doing:
-$$
-X_n=\left[
-\begin{array}{c}
-X_1/\lambda_1^{(1)} \\
-X_2/\lambda_1^{(2)} \\
-\vdots \\
-X_L/\lambda_1^{(L)}
-\end{array}
-\right]
-= WH
-$$
-
-where $\lambda_1^{(i)}$is the first eigenvalue obtained when computing the PCA from $X_i$.
-
-MFA can be run using the `FactoMineR` package.
-
-```{r}
+## ---------------------------------------------------------------------------------------------------------------------------------------------------------
 ## ------------------------------------------------------------------------------------------------------------
 # run the MFA function from the FactoMineR package
 r.mfa <- FactoMineR::MFA(
@@ -567,38 +350,9 @@ pheatmap::pheatmap(t(mfa.h)[1:2,], annotation_col = anno_col,
                   main="MFA for multi-omics integration")
 
 
-```
 
-### Joint Non negative Matrix Factorization
 
-NMF has the form $X\approx WH$,  
-$X\ge 0$, $W\ge 0$, y $H\ge 0$. 
-
-Non-negative constraints make a lossless decomposition (that is, $ X = WH $) generally impossible. Therefore,  NMF tries to find a solution that minimizes the Frobenius norm (matrix Euclidean norm) of the reconstruction:
-$$
-\min\|X-WH\|_F \qquad
-W\ge 0,
-H\ge 0
-$$
-
-As with MFA, in the context of multi-omic data, the idea is to find a decomposition of the joint matrix.
-Also here one normalizes each data matrix separately
-
-$$
-X=\left[
-\begin{array}{c}
-X_1^N/\alpha_1 \\
-X_2^N/\alpha_2 \\
-\vdots \\
-X_L^N/\alpha_L
-\end{array}
-\right]
-$$
-where $X_i^N$ is the normalized dat matrix $X_i^N=\frac{x^{ij}}{\sum_j x^{ij}}$ y $\alpha_i=\|X_i^N\|_F$.
-
-NMF is applied to the joint matrix $X$.
-
-```{r jointNMF}
+## ----jointNMF---------------------------------------------------------------------------------------------------------------------------------------------
 ## ----warning=FALSE-------------------------------------------------------------------------------------------
 # Feature-normalize the data
 x1.featnorm <- x1 / rowSums(x1)
@@ -635,52 +389,38 @@ jointMat <- rbind(matExpr, matSNP, matCNVpos)
 r.nmf <- nmf(t(jointMat),
              2,
              method='Frobenius')
-```
 
-Extract the H and W matrices from the nmf run result
 
-```{r}
+## ---------------------------------------------------------------------------------------------------------------------------------------------------------
 nmf.h <- NMF::basis(r.nmf)
 nmf.w <- NMF::coef(r.nmf)
 nmfw <- t(nmf.w)
-```
 
-Create a dataframe with the H matrix and the CMS label (subtype)
 
-```{r}
+## ---------------------------------------------------------------------------------------------------------------------------------------------------------
 nmf_df <- as.data.frame(nmf.h)
 colnames(nmf_df) <- c("dim1", "dim2")
 nmf_df$subtype <- factor(covariates[rownames(nmf_df),]$cms_label)
-```
 
-Create the scatter plot
 
-```{r}
+## ---------------------------------------------------------------------------------------------------------------------------------------------------------
 ggplot2::ggplot(nmf_df, ggplot2::aes(x=dim1, y=dim2, color=subtype)) +
 ggplot2::geom_point() +
 ggplot2::ggtitle("Scatter plot of 2-component NMF for multi-omics integration")
-```
 
-```{r}
+
+## ---------------------------------------------------------------------------------------------------------------------------------------------------------
 pheatmap::pheatmap(t(nmf_df[,1:2]),
                    annotation_col = anno_col,
                    show_colnames=FALSE,
                    main="Heatmap of 2-component NMF")
-```
 
-### iCluster
 
-iCluster is an integrative clustering method intended to account for the heterogeneity in the joint data matrix.
-
-iCluster+ learns factors which allow tumor sub-types CMS1 and CMS3 to be discriminated.
-
-Sketch of iCluster model. Each omics datatype is decomposed to a coefficient matrix and a shared latent variable matrix, plus noise.
-
-```{r}
+## ---------------------------------------------------------------------------------------------------------------------------------------------------------
 knitr::include_graphics("images/icluster.png" )
-```
 
-```{r integrativeClustering}
+
+## ----integrativeClustering--------------------------------------------------------------------------------------------------------------------------------
 library(iClusterPlus)
 # run the iClusterPlus function
 r.icluster <- iClusterPlus::iClusterPlus(
@@ -703,36 +443,24 @@ icp_df <- as.data.frame(icluster.z)
 colnames(icp_df) <- c("dim1", "dim2")
 rownames(icp_df) <- colnames(x1)
 icp_df$subtype <- factor(covariates[rownames(icp_df),]$cms_label)
-```
 
-```{r, moiclusterplusscatter,fig.cap="iCluster+ learns factors which allow tumor sub-types CMS1 and CMS3 to be discriminated.", echo=FALSE}
+
+## ---- moiclusterplusscatter,fig.cap="iCluster+ learns factors which allow tumor sub-types CMS1 and CMS3 to be discriminated.", echo=FALSE-----------------
 
 ggplot2::ggplot(icp_df, ggplot2::aes(x=dim1, y=dim2, color=subtype)) +
 ggplot2::geom_point() +
 ggplot2::ggtitle("Scatter plot of iCluster+ factors")
-```
 
-iCluster+ factors, shown in a heatmap, separate tumors into their subtypes well
 
-```{r iclusterFactors}
+## ----iclusterFactors--------------------------------------------------------------------------------------------------------------------------------------
 pheatmap::pheatmap(t(icp_df[,1:2]),
                    annotation_col = anno_col, 
                    show_colnames = FALSE,border_color = NA,
                    main="Heatmap of iCluster+ factors")
 
-```
 
 
-
-## Clustering using latent factors
-
-### One-Hot Clustering
-
-one-hot clustering assigns each sample the cluster according to its dominant NMF factor.
-
-It is easily accessible using the max.col function
-
-```{r}
+## ---------------------------------------------------------------------------------------------------------------------------------------------------------
 nmf.clusters <- max.col(nmf.h)
 names(nmf.clusters) <- rownames(nmf.h)
 
@@ -749,13 +477,9 @@ pheatmap::pheatmap(t(nmf.h[order(nmf.clusters),]),
   annotation_col = anno_nmf_cl,
   show_colnames = FALSE,border_color=NA,
   main="Joint NMF factors\nwith clusters and molecular subtypes")
-```
 
-### K-Means
 
-use the kmeans function to cluster the iCluster H matrix (here, z) using 2 as the number of clusters.
-
-```{r}
+## ---------------------------------------------------------------------------------------------------------------------------------------------------------
 icluster.clusters <- kmeans(icluster.z, 2)$cluster
 names(icluster.clusters) <- rownames(icluster.z)
 
@@ -773,15 +497,9 @@ pheatmap::pheatmap(
   show_colnames = FALSE,border_color=NA,
   annotation_col = anno_icluster_cl,
   main="iCluster factors\nwith clusters and molecular subtypes")
-```
 
-## Biological interpretation of latent factors
 
-### Inspection of feature weights in loading vectors
-
-The Heatmap below shows the association of input features from multi-omics data (gene expression, copy number variation, and mutations), with JNMF factors. Gene expression features dominate both factors, but copy numbers and mutations mostly affect only one factor each.
-
-```{r}
+## ---------------------------------------------------------------------------------------------------------------------------------------------------------
 # create an annotation dataframe for the heatmap
 # for each feature, indicating its omics-type
 data_anno <- data.frame(
@@ -799,13 +517,9 @@ pheatmap::pheatmap(nmfw,
                    main="NMF coefficients",
                    clustering_distance_rows = "manhattan",
                    fontsize_row = 1)
-```
 
-### Making sense of factors using enrichment analysis
 
-Enrichment ANalysis provides a view of biological processes of pathways related with selected genes or metagenes
-
-```{r}
+## ---------------------------------------------------------------------------------------------------------------------------------------------------------
 # select genes associated preferentially with each factor
 # by their relative loading in the W matrix
 library(enrichR)
@@ -820,11 +534,9 @@ go.factor.2 <- enrichr(genes.factor.2,
                                 databases = c("GO_Biological_Process_2018")
                                 )$GO_Biological_Process_2018
 
-```
 
-The top GO-Terms associated with the selected factors are shown below.
 
-```{r}
+## ---------------------------------------------------------------------------------------------------------------------------------------------------------
 library(kableExtra)
 go.factor.2$Genes <- gsub(";", "; ", go.factor.2$Genes)
 the.table <- knitr::kable(head(go.factor.2, 3)[,c("Term", "Adjusted.P.value", "Combined.Score")],
@@ -834,13 +546,9 @@ the.table <- knitr::kable(head(go.factor.2, 3)[,c("Term", "Adjusted.P.value", "C
 the.table <- kableExtra::kable_styling(the.table ,latex_options = c( "scale_down"))
 #the.table <- kableExtra::column_spec(the.table, 4, width="10em")
 the.table
-```
 
-### Relating factors with clinical covariates
 
-Box plot showing MSI/MSS status distribution and NMF factor 1 values
-
-```{r}
+## ---------------------------------------------------------------------------------------------------------------------------------------------------------
 # create a data frame holding covariates (age, gender, MSI status)
 a <- data.frame(age=covariates$age,
                 gender=as.numeric(covariates$gender),
@@ -853,13 +561,11 @@ cov_factor <- cbind(a,b)
 ggplot2::ggplot(cov_factor, ggplot2::aes(x=msi, y=factor1, group=msi)) +
   ggplot2::geom_boxplot() +
   ggplot2::ggtitle("NMF factor 1 microsatellite instability")
-```
 
-Box plot showing MSI/MSS status distribution and NMF factor 2 values.
 
-```{r}
+## ---------------------------------------------------------------------------------------------------------------------------------------------------------
 ggplot2::ggplot(cov_factor, ggplot2::aes(x=msi, y=factor2, group=msi)) +
   ggplot2::geom_boxplot() +
   ggplot2::ggtitle("NMF factor 2 and microsatellite instability")
 
-```
+
