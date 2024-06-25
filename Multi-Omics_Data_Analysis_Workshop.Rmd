@@ -83,9 +83,9 @@ kableExtra::kable(timeTable) %>% kableExtra::kable_styling()
 
 ### Learning objectives
 
--   Learn to apply a variety of singl and multiple matrix factorization techniques
--   Understand the difference between PCA, ICA and NMF through some examples
--   Understand why we may need to ressort to multi-omics analysis and how to do using either MFA or joint matrix factorization
+-   Learn to apply a variety of single and multiple matrix factorization techniques.
+-   Understand the difference between PCA, ICA and NMF through some examples.
+-   Understand why we may need to resort to multi-omics analysis and how to do using either MFA or joint matrix factorization
 -   Learn how to attempt a biological interpretation of single or multi-omics using enrichment analysis.
 -   Learn how to create and use objects of classes `SuimmarizedExperiment` and `MultiAssayData` to store and manipulate omics data.
 
@@ -96,7 +96,7 @@ kableExtra::kable(timeTable) %>% kableExtra::kable_styling()
 The examples used in the workshop have been extracted from two sources
 
 -   Chapters 4 and 11 of the excellent book [Computational Genomics with R](https://compgenomr.github.io/book/) which we will address as "CompGenomR".
--   The suplementary materials from the paper [Enter the Matrix: Factorization uncovers knowledge from omics](https://www.sciencedirect.com/science/article/pii/S0168952518301240). The paper contains very nice examples but unfortunately (oh surprise!) I have been unable to find the data.
+-   The supplementary materials from the paper [Enter the Matrix: Factorization uncovers knowledge from omics](https://www.sciencedirect.com/science/article/pii/S0168952518301240). The paper contains very nice examples but unfortunately (oh surprise!) I have been unable to find the data.
 - Some tutorials and materials scattered in the web:
   - [Tutorial on SummarizedExperiment](https://www.bioconductor.org/help/course-materials/2019/BSS2019/04_Practical_CoreApproachesInBioconductor.html)
   - [Introduction to Pathway Analysis with Bioconductor](https://github.com/ASPteaching/An-Introduction-to-Pathway-Analysis-with-R-and-Bioconductor)
@@ -114,10 +114,10 @@ The examples used in the workshop have been extracted from two sources
 
 ### Getting the data for the example
 
-In this example we work with  al leukemia data set that has been derrived from the [`leukemiasEset` Bioconductor package](https://bioconductor.org/packages/release/data/experiment/html/leukemiasEset.html).
+In this example we work with  al leukemia data set that has been derived from the [`leukemiasEset` Bioconductor package](https://bioconductor.org/packages/release/data/experiment/html/leukemiasEset.html).
 This data set contains gene expression values from 60 bone marrow samples of patients with one of the four main types of leukemia (ALL, AML, CLL, CML) or no-leukemia controls. 
 
-In order to avoid working with all the data the data set has been trimmed down _to the top 1000 most variable genes_. THis allows working with it more easily, since genes that are not very variable do not contribute much to the distances between patients. 
+In order to avoid working with all the data the data set has been trimmed down _to the top 1000 most variable genes_. This allows working with it more easily, since genes that are not very variable do not contribute much to the distances between patients. 
 
 The code below shows how to recreate the dataset.
 
@@ -143,7 +143,7 @@ if (!exists("datasets/leukemiaExpressionSubset.rds")){
 }
 ```
 
-Alternatively if you suceeded to install the `CompGenomRData`package you can use:
+Alternatively if you succeeded to install the `CompGenomRData`package you can use:
 
 ```{r eval=FALSE}
 expFile=system.file("extdata","leukemiaExpressionSubset.rds",
@@ -174,7 +174,7 @@ colData(leukemiaSummExp)
 dim(colData(leukemiaSummExp))
 ```
 
-One of its most interesting functionality is that subsetting is applied on all related "sub-objects" (slots).
+One of its most interesting functionality is that sub-setting is applied on all related "sub-objects" (slots).
 
 ```{r eval=FALSE}
 leukemiaSub <-leukemiaSummExp[,1:10] 
@@ -189,7 +189,7 @@ The most common way to visualize omics data is using _heatmaps_.
 These plots  show expression values using a colour scale for numeric values.
 
 They are usually set to group rows and/or columns based on their similarity. 
-Grouping is done by hierarchichal clustering.
+Grouping is done by hierarchical clustering.
 
 See [this section](https://compgenomr.github.io/book/clustering-grouping-samples-based-on-their-similarity.html) in CompGenomR book for details.
 
@@ -233,7 +233,7 @@ plot(mat[rownames(mat)=="ENSG00000100504",],
 
 PCA provides a new coordinate system based on the _eigenVectors_ which point into the directions of highest variance. The new axis, that we can call "eigenGenes", whatever they are, are orthogonal to each other describing non-overlapping structure in the data.
 
-Our goal is usually to see the samples in the space derived from genes space but of lesser dimension. Notice that for maling this possible  we transpose the matrix so samples are on the columns.
+Our goal is usually to see the samples in the space derived from genes space but of lesser dimension. Notice that for making this possible  we transpose the matrix so samples are on the columns.
 
 ```{r PCArot}
 par(mfrow=c(1,2))
@@ -413,7 +413,7 @@ legend("bottomleft",
 
 ## Use case: multi-omics data for colo-rectal cancer
 
-For this use case we use thre distinct omics that have been downloaded from the TCGA database. 
+For this use case we use thee distinct omics that have been downloaded from the TCGA database. 
 Notice that the data matrices are transposed with respect the one we used above. 
 
 This allows joining the distinct omics by their common dimension, the samples.
@@ -422,7 +422,7 @@ The omics data used are:
 
 - _Gene expression (RNA-seq) data_ The rows correspond to patients, referred to by their TCGA identifier, as the first column of the table. Columns represent the genes, and the values are RPKM normalized expression values. The column names are the names or symbols of the genes.
 
-- _Mutation Data_ In the mutation matrix, each cell is a binary 1/0, indicating whether or not a tumor has a non-synonymous mutation in the gene indicated by the column. These types of mutations change the aminoacid sequence, therefore they are likely to change the function of the protein.
+- _Mutation Data_ In the mutation matrix, each cell is a binary 1/0, indicating whether or not a tumour has a non-synonymous mutation in the gene indicated by the column. These types of mutations change the aminoacid sequence, therefore they are likely to change the function of the protein.
   
 - _Copy Number Variation data_ During transformation from healthy cells to cancer cells, the genome sometimes undergoes large-scale instability; large segments of the genome might be replicated or lost. This will be reflected in each segment’s “copy number”. In this matrix, each column corresponds to a chromosome segment, and the value of the cell is a real-valued score indicating if this segment has been amplified (copied more) or lost, relative to a non-cancer control from the same patient.
 
@@ -521,7 +521,7 @@ pheatmap::pheatmap(x3,
 
 Simply stated MFA is an extension of PCA to a multi-omics dataset.
 
-Given that the distinct experiments have distinct scalesand distinct variances we scale each dataset by doing:
+Given that the distinct experiments have distinct scales and distinct variances we scale each dataset by doing:
 $$
 X_n=\left[
 \begin{array}{c}
@@ -534,7 +534,7 @@ X_L/\lambda_1^{(L)}
 = WH
 $$
 
-where $\lambda_1^{(i)}$is the first eigenvalue obtained when computing the PCA from $X_i$.
+where $\lambda_1^{(i)}$is the first eigenvector obtained when computing the PCA from $X_i$.
 
 MFA can be run using the `FactoMineR` package.
 
@@ -594,7 +594,7 @@ X_L^N/\alpha_L
 \end{array}
 \right]
 $$
-where $X_i^N$ is the normalized dat matrix $X_i^N=\frac{x^{ij}}{\sum_j x^{ij}}$ y $\alpha_i=\|X_i^N\|_F$.
+where $X_i^N$ is the normalized data matrix $X_i^N=\frac{x^{ij}}{\sum_j x^{ij}}$ y $\alpha_i=\|X_i^N\|_F$.
 
 NMF is applied to the joint matrix $X$.
 
@@ -672,7 +672,7 @@ pheatmap::pheatmap(t(nmf_df[,1:2]),
 
 iCluster is an integrative clustering method intended to account for the heterogeneity in the joint data matrix.
 
-iCluster+ learns factors which allow tumor sub-types CMS1 and CMS3 to be discriminated.
+iCluster+ learns factors which allow tumour sub-types CMS1 and CMS3 to be discriminated.
 
 Sketch of iCluster model. Each omics datatype is decomposed to a coefficient matrix and a shared latent variable matrix, plus noise.
 
