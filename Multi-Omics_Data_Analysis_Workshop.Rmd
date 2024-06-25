@@ -1,7 +1,7 @@
 ---
 title: Multi-Omics Data Analysis Workshop
 author: "Alex Sanchez-Pla, Francesc Carmona, Pol Castellano"
-date: "July 2021"
+date: "`r Sys.Date()`"
 output:
 # prettydoc::html_pretty:
    html_document:
@@ -428,10 +428,10 @@ The omics data used are:
 
 ```{r}
 library(stringi)
-myDir <- getwd() 
-myDir <-unlist(stri_split_regex(myDir, "/"))
-currDir <- myDir[length(myDir)]
-if (currDir=="202107-GRBio-Integration-Workshop") setwd("lab-Matrix_factorization")
+# myDir <- getwd() 
+# myDir <-unlist(stri_split_regex(myDir, "/"))
+# currDir <- myDir[length(myDir)]
+# if (currDir=="202107-GRBio-Integration-Workshop") setwd("lab-Matrix_factorization")
 
 library(magrittr)
 # read in the csv from the multi-omics-folder
@@ -464,8 +464,10 @@ knitr::kable(head(t(head(x3))),
 
 ## ------------------------------------------------------------------------------------------------------------
 # read in the csv from the companion package as a data frame
-csvfile <- system.file("extdata", "multi-omics", "COREAD_CMS13_subtypes.csv",
-                       package="compGenomRData")
+#csvfile <- system.file("extdata", "multi-omics", "COREAD_CMS13_subtypes.csv",                        package="compGenomRData")
+
+csvfile <- "datasets/multi-omics/COREAD_CMS13_subtypes.csv"
+
 covariates <- read.csv(csvfile, row.names=1)
 # Fix the TCGA identifiers so they match up with the omics data
 rownames(covariates) <- gsub(pattern = '-', replacement = '\\.',
